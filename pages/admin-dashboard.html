@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduPortal — Admin Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/dashboard.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><span class="logo-text">EduPortal</span></div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active">Dashboard</a>
+        <a href="#" class="nav-item">Students</a>
+        <a href="#" class="nav-item">Teachers</a>
+        <a href="#" class="nav-item">Parents</a>
+        <a href="#" class="nav-item">Activity Log</a>
+      </nav>
+      <button class="logout-btn" id="logout-btn">Sign out</button>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-sub" id="welcome-msg">Welcome back</p>
+        </div>
+      </header>
+      <div class="content" id="dashboard-content">
+        <p style="color:#888;">Loading...</p>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="../js/admin-dashboard.js"></script>
+</body>
+</html>
