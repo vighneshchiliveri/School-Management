@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduPortal — Students</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/students.css" />
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="logo-text">EduPortal</span></div>
+    <nav class="sidebar-nav">
+      <a href="admin-dashboard.html" class="nav-item">Dashboard</a>
+      <a href="students.html" class="nav-item active">Students</a>
+      <a href="teachers.html" class="nav-item">Teachers</a>
+      <a href="parents.html" class="nav-item">Parents</a>
+      <a href="attendance.html" class="nav-item">Attendance</a>
+      <a href="grades.html" class="nav-item">Grades</a>
+      <a href="timetable.html" class="nav-item">Timetable</a>
+      <a href="notices.html" class="nav-item">Notices</a>
+      <a href="houses.html" class="nav-item">Houses</a>
+    </nav>
+    <button class="logout-btn" id="logout-btn">Sign out</button>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">Students</h1>
+        <p class="page-sub" id="student-count">Loading...</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn-secondary" id="import-csv-btn">Import CSV</button>
+        <button class="btn-primary" id="add-student-btn">+ Add Student</button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Filters -->
+      <div class="filters-bar">
+        <input type="text" id="search-input" class="filter-input search-input" placeholder="Search name or admission no..." />
+        <select id="filter-class" class="filter-input">
+          <option value="">All Classes</option>
+          <option>6</option><option>7</option><option>8</option>
+          <option>9</option><option>10</option><option>11</option><option>12</option>
+        </select>
+        <select id="filter-section" class="filter-input">
+          <option value="">All Sections</option>
+          <option>A</option><option>B</option>
+        </select>
+        <select id="filter-house" class="filter-input">
+          <option value="">All Houses</option>
+          <option>Raman</option><option>Tagore</option><option>Shivaji</option><option>Ashoka</option>
+        </select>
+        <select id="filter-category" class="filter-input">
+          <option value="">All Categories</option>
+          <option>General</option><option>OBC</option><option>SC</option><option>ST</option>
+        </select>
+        <select id="filter-gender" class="filter-input">
+          <option value="">All Genders</option>
+          <option>Male</option><option>Female</option>
+        </select>
+        <select id="filter-blood" class="filter-input">
+          <option value="">All Blood Groups</option>
+          <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+        </select>
+        <button class="btn-ghost" id="clear-filters-btn">Clear</button>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <table class="data-table" id="students-table">
+          <thead>
+            <tr>
+              <th>Admission No</th>
+              <th>Name</th>
+              <th>Class</th>
+              <th>Section</th>
+              <th>Roll No</th>
+              <th>Gender</th>
+              <th>House</th>
+              <th>Category</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="students-tbody">
+            <tr><td colspan="9" class="table-empty">Loading students...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination" id="pagination"></div>
+
+    </div>
+  </main>
+
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-title">Add Student</h2>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <form class="modal-form" id="student-form">
+      <div class="form-grid">
+        <div class="field-group">
+          <label>Full Name *</label>
+          <input type="text" name="full_name" required />
+        </div>
+        <div class="field-group">
+          <label>Admission No *</label>
+          <input type="text" name="admission_no" required />
+        </div>
+        <div class="field-group">
+          <label>Class *</label>
+          <select name="class" required>
+            <option value="">Select</option>
+            <option>6</option><option>7</option><option>8</option>
+            <option>9</option><option>10</option><option>11</option><option>12</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Section *</label>
+          <select name="section" required>
+            <option value="">Select</option>
+            <option>A</option><option>B</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Roll No</label>
+          <input type="text" name="roll_no" />
+        </div>
+        <div class="field-group">
+          <label>Date of Birth</label>
+          <input type="date" name="date_of_birth" />
+        </div>
+        <div class="field-group">
+          <label>Gender *</label>
+          <select name="gender" required>
+            <option value="">Select</option>
+            <option>Male</option><option>Female</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Blood Group</label>
+          <select name="blood_group">
+            <option value="">Select</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Category *</label>
+          <select name="category" required>
+            <option value="">Select</option>
+            <option>General</option><option>OBC</option><option>SC</option><option>ST</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>House</label>
+          <select name="house">
+            <option value="">Select</option>
+            <option>Raman</option><option>Tagore</option><option>Shivaji</option><option>Ashoka</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Father's Name</label>
+          <input type="text" name="father_name" />
+        </div>
+        <div class="field-group">
+          <label>Mother's Name</label>
+          <input type="text" name="mother_name" />
+        </div>
+        <div class="field-group">
+          <label>Parent Phone</label>
+          <input type="tel" name="parent_phone" />
+        </div>
+        <div class="field-group full-width">
+          <label>Address</label>
+          <textarea name="address" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-ghost" id="modal-cancel">Cancel</button>
+        <button type="submit" class="btn-primary" id="modal-submit">Save Student</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- CSV Import Modal -->
+<div class="modal-overlay" id="csv-modal-overlay" hidden>
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">Import Students via CSV</h2>
+      <button class="modal-close" id="csv-modal-close">✕</button>
+    </div>
+    <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+      <p style="font-size:0.85rem; color:#555; line-height:1.6;">
+        Upload a CSV file with columns:<br/>
+        <code>full_name, admission_no, class, section, roll_no, gender, date_of_birth, blood_group, category, house, father_name, mother_name, parent_phone, address</code>
+      </p>
+      <a href="../templates/students-template.csv" download class="btn-ghost" style="text-align:center;">Download Template</a>
+      <input type="file" id="csv-file-input" accept=".csv" />
+      <div id="csv-status" style="font-size:0.825rem; color:#555;"></div>
+      <button class="btn-primary" id="csv-upload-btn">Upload & Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="delete-modal-overlay" hidden>
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">Delete Student</h2>
+      <button class="modal-close" id="delete-modal-close">✕</button>
+    </div>
+    <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+      <p style="font-size:0.875rem; color:#333;">Are you sure you want to delete <strong id="delete-student-name"></strong>? This cannot be undone.</p>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button class="btn-ghost" id="delete-cancel">Cancel</button>
+        <button class="btn-danger" id="delete-confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="../js/students.js"></script>
+</body>
+</html>

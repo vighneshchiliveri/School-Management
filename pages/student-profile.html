@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduPortal — Student Profile</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/students.css" />
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="logo-text">EduPortal</span></div>
+    <nav class="sidebar-nav">
+      <a href="admin-dashboard.html" class="nav-item">Dashboard</a>
+      <a href="students.html" class="nav-item active">Students</a>
+      <a href="teachers.html" class="nav-item">Teachers</a>
+      <a href="parents.html" class="nav-item">Parents</a>
+      <a href="attendance.html" class="nav-item">Attendance</a>
+      <a href="grades.html" class="nav-item">Grades</a>
+      <a href="timetable.html" class="nav-item">Timetable</a>
+      <a href="notices.html" class="nav-item">Notices</a>
+      <a href="houses.html" class="nav-item">Houses</a>
+    </nav>
+    <button class="logout-btn" id="logout-btn">Sign out</button>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <a href="students.html" class="back-link">← Back to Students</a>
+        <h1 class="page-title" id="profile-name">Student Profile</h1>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn-secondary" id="print-id-btn">Print ID Card</button>
+        <button class="btn-primary" id="edit-btn">Edit</button>
+      </div>
+    </header>
+
+    <div class="content" id="profile-content">
+      <p style="color:#888;">Loading...</p>
+    </div>
+  </main>
+
+</div>
+
+<!-- ID Card Print Area (hidden, shown on print) -->
+<div id="id-card-print" class="id-card-print" hidden>
+  <div class="id-card">
+    <div class="id-card-header">
+      <div class="id-school-name">Jawahar Navodaya Vidyalaya</div>
+      <div class="id-school-sub">Student Identity Card</div>
+    </div>
+    <div class="id-card-body">
+      <div class="id-photo-box" id="id-photo-box">
+        <span style="color:#aaa; font-size:0.7rem;">Photo</span>
+      </div>
+      <div class="id-details">
+        <div class="id-field"><span class="id-label">Name</span><span class="id-val" id="id-name"></span></div>
+        <div class="id-field"><span class="id-label">Adm. No</span><span class="id-val" id="id-adm"></span></div>
+        <div class="id-field"><span class="id-label">Class</span><span class="id-val" id="id-class"></span></div>
+        <div class="id-field"><span class="id-label">Roll No</span><span class="id-val" id="id-roll"></span></div>
+        <div class="id-field"><span class="id-label">House</span><span class="id-val" id="id-house"></span></div>
+        <div class="id-field"><span class="id-label">Blood Grp</span><span class="id-val" id="id-blood"></span></div>
+        <div class="id-field"><span class="id-label">Category</span><span class="id-val" id="id-category"></span></div>
+      </div>
+    </div>
+    <div class="id-card-footer">Academic Year 2025–26</div>
+  </div>
+</div>
+
+<script type="module" src="../js/student-profile.js"></script>
+</body>
+</html>
