@@ -53,8 +53,10 @@ form.addEventListener('submit', async (e) => {
 
   try {
     let role = null;
+    let profileId = null;
 
     if (currentRole === 'staff') {
+      // Check admins table first
       const { data: admin } = await supabase
         .from('admins')
         .select('id, username, full_name')
@@ -63,18 +65,26 @@ form.addEventListener('submit', async (e) => {
 
       if (admin) {
         role = 'admin';
+        profileId = admin.id;
       } else {
+        // Check teachers table
         const { data: teacher } = await supabase
           .from('teachers')
           .select('id, username, full_name')
           .eq('username', username)
           .single();
 
-        if (teacher) role = 'teacher';
+        if (teacher) {
+          role = 'teacher';
+          profileId = teacher.id;
+        }
       }
 
-      if (!role) throw new Error('Username not found. Please check and try again.');
+      if (!role) {
+        throw new Error('Username not found. Please check and try again.');
+      }
 
+      // Sign in via Supabase Auth using username as email (username@school.local)
       const { error } = await supabase.auth.signInWithPassword({
         email: `${username}@school.local`,
         password
@@ -82,6 +92,7 @@ form.addEventListener('submit', async (e) => {
 
       if (error) throw new Error('Incorrect password. Please try again.');
 
+      // Store role in sessionStorage for dashboard use
       sessionStorage.setItem('role', role);
       sessionStorage.setItem('username', username);
 
@@ -90,13 +101,16 @@ form.addEventListener('submit', async (e) => {
         : 'pages/teacher-dashboard.html';
 
     } else {
+      // Parent login
       const { data: parent } = await supabase
         .from('parents')
         .select('id, username, full_name')
         .eq('username', username)
         .single();
 
-      if (!parent) throw new Error('Username not found. Please check and try again.');
+      if (!parent) {
+        throw new Error('Username not found. Please check and try again.');
+      }
 
       const { error } = await supabase.auth.signInWithPassword({
         email: `${username}@school.local`,
@@ -153,6 +167,7 @@ function setLoading(on) {
   btnSpinner.hidden = !on;
 }
 
+// Clear error on input
 ['username', 'password'].forEach(f => {
   document.getElementById(f).addEventListener('input', () => {
     document.getElementById(f).classList.remove('is-error');
