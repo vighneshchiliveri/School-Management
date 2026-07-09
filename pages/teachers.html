@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JNV School Management — Teachers</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/students.css" />
+  <link rel="stylesheet" href="../css/modules.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="logo-text">JNV Portal</span></div>
+    <nav class="sidebar-nav">
+        <a href="admin-dashboard.html" class="nav-item ">Dashboard</a>
+        <a href="students.html" class="nav-item ">Students</a>
+        <a href="teachers.html" class="nav-item active">Teachers</a>
+        <a href="parents.html" class="nav-item ">Parents</a>
+        <a href="attendance.html" class="nav-item ">Attendance</a>
+        <a href="grades.html" class="nav-item ">Grades</a>
+        <a href="timetable.html" class="nav-item ">Timetable</a>
+        <a href="notices.html" class="nav-item ">Notices</a>
+        <a href="houses.html" class="nav-item ">Houses</a>
+    </nav>
+    <button class="logout-btn" id="logout-btn">Sign out</button>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">Teachers</h1>
+        <p class="page-sub">Manage JNV teachers, subjects, contact details, and class teacher duties.</p>
+      </div>
+      <div class="topbar-actions"><button class="btn-primary" id="add-teacher-btn">+ Add Teacher</button></div>
+    </header>
+    <div class="content">
+      <div class="summary-strip" id="teacher-summary"></div>
+      <div class="filters-bar">
+        <input type="text" id="search-input" class="filter-input search-input" placeholder="Search teacher, employee ID, subject..." />
+        <select id="filter-subject" class="filter-input"><option value="">All Subjects</option></select>
+        <select id="filter-house" class="filter-input"><option value="">All Houses</option></select>
+        <button class="btn-ghost" id="clear-filters-btn">Clear</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Employee ID</th><th>Name</th><th>Designation</th><th>Subject</th><th>Phone</th><th>Class Teacher</th><th>House</th><th>Actions</th></tr></thead>
+          <tbody id="teachers-tbody"><tr><td colspan="8" class="table-empty">Loading teachers...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+
+      <div class="modal-overlay" id="teacher-modal" hidden>
+        <div class="modal">
+          <div class="modal-header"><h2 class="modal-title" id="modal-title">Add Teacher</h2><button class="modal-close" id="modal-close">✕</button></div>
+          <form class="modal-form" id="teacher-form">
+            <div class="form-grid">
+              <div class="field-group"><label>Full Name *</label><input name="full_name" required /></div>
+              <div class="field-group"><label>Username</label><input name="username" placeholder="for login" /></div>
+              <div class="field-group"><label>Employee ID</label><input name="employee_id" /></div>
+              <div class="field-group"><label>Designation</label><input name="designation" placeholder="PGT / TGT / PET / Librarian" /></div>
+              <div class="field-group"><label>Subject</label><input name="subject" /></div>
+              <div class="field-group"><label>Phone</label><input name="phone" /></div>
+              <div class="field-group"><label>Email</label><input type="email" name="email" /></div>
+              <div class="field-group"><label>Class Teacher Of</label><input name="class_teacher_of" placeholder="Example: 10 A" /></div>
+              <div class="field-group"><label>House</label><select name="house" id="teacher-house-select"></select></div>
+              <div class="field-group"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div>
+              <div class="field-group full-width"><label>Address / Notes</label><textarea name="address" rows="2"></textarea></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn-ghost" id="modal-cancel">Cancel</button><button class="btn-primary" id="modal-submit">Save Teacher</button></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script type="module" src="../js/teachers.js"></script>
+<script type="module" src="../js/sidebar-role.js"></script>
+</body>
+</html>

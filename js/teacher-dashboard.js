@@ -1,34 +1,28 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { supabase, requireSession, initLogout } from './app-config.js';
 
-const SUPABASE_URL = 'https://lwoyqujqcmigfqtlbfvc.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3b3lxdWpxY21pZ2ZxdGxiZnZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMTU3NzMsImV4cCI6MjA5NzY5MTc3M30.bCtMtepa5QD1kInndVUdohTmm2-CSZBENF8IjG1mbtk';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-const { data: { session } } = await supabase.auth.getSession();
-if (!session) { window.location.href = '../index.html'; }
+await requireSession();
+initLogout();
 
 const username = sessionStorage.getItem('username') || 'Teacher';
 document.getElementById('welcome-msg').textContent = `Welcome back, ${username}`;
 
-document.getElementById('logout-btn').addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  sessionStorage.clear();
-  window.location.href = '../index.html';
-});
+async function countStudents() {
+  const { count } = await supabase.from('students').select('*', { count: 'exact', head: true });
+  return count || 0;
+}
 
-document.getElementById('dashboard-content').innerHTML = `
-  <div class="stat-grid">
-    <div class="stat-card">
-      <div class="stat-label">My Classes</div>
-      <div class="stat-value">—</div>
+async function loadDashboard() {
+  const totalStudents = await countStudents().catch(() => 0);
+  document.getElementById('dashboard-content').innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Students</div><div class="stat-value">${totalStudents}</div></div>
+      <div class="stat-card"><div class="stat-label">Attendance</div><div class="stat-value" style="font-size:1.1rem;">Ready</div></div>
+      <div class="stat-card"><div class="stat-label">Grades</div><div class="stat-value" style="font-size:1.1rem;">Ready</div></div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Students</div>
-      <div class="stat-value">—</div>
-    </div>
-  </div>
-  <div class="section-title">Coming soon</div>
-  <div class="activity-list">
-    <p class="empty-state">Classes, attendance, and grades will appear here once set up by admin.</p>
-  </div>
-`;
+    <div class="section-title">Teacher Work Area</div>
+    <div class="activity-list">
+      <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Use the sidebar to view students, mark attendance, enter grades, view timetable, and read notices.</div><div class="activity-time">JNV teacher dashboard</div></div></div>
+    </div>`;
+}
+
+loadDashboard();

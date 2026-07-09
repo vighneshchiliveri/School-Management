@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JNV School Management — Attendance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/students.css" />
+  <link rel="stylesheet" href="../css/modules.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="logo-text">JNV Portal</span></div>
+    <nav class="sidebar-nav">
+        <a href="admin-dashboard.html" class="nav-item ">Dashboard</a>
+        <a href="students.html" class="nav-item ">Students</a>
+        <a href="teachers.html" class="nav-item ">Teachers</a>
+        <a href="parents.html" class="nav-item ">Parents</a>
+        <a href="attendance.html" class="nav-item active">Attendance</a>
+        <a href="grades.html" class="nav-item ">Grades</a>
+        <a href="timetable.html" class="nav-item ">Timetable</a>
+        <a href="notices.html" class="nav-item ">Notices</a>
+        <a href="houses.html" class="nav-item ">Houses</a>
+    </nav>
+    <button class="logout-btn" id="logout-btn">Sign out</button>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">Attendance</h1>
+        <p class="page-sub">Mark and review daily class-wise attendance for JNV students.</p>
+      </div>
+      <div class="topbar-actions"></div>
+    </header>
+    <div class="content">
+      <div class="module-card">
+        <div class="module-card-title">Select Class Attendance</div>
+        <div class="module-card-sub">Choose date, class, and section. Then mark Present / Absent / Late / Leave.</div>
+        <div class="form-panel" style="margin-top:14px;">
+          <div class="field-group"><label>Date</label><input type="date" id="attendance-date" /></div>
+          <div class="field-group"><label>Class</label><select id="filter-class"></select></div>
+          <div class="field-group"><label>Section</label><select id="filter-section"></select></div>
+          <div class="inline-actions"><button class="btn-secondary" id="load-students-btn">Load Students</button><button class="btn-primary" id="save-attendance-btn">Save Attendance</button></div>
+        </div>
+      </div>
+      <div class="summary-strip" id="attendance-summary"></div>
+      <div class="attendance-grid" id="attendance-list"></div>
+    </div>
+  </main>
+</div>
+<script type="module" src="../js/attendance.js"></script>
+<script type="module" src="../js/sidebar-role.js"></script>
+</body>
+</html>

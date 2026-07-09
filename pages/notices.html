@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JNV School Management — Notices</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/students.css" />
+  <link rel="stylesheet" href="../css/modules.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="logo-text">JNV Portal</span></div>
+    <nav class="sidebar-nav">
+        <a href="admin-dashboard.html" class="nav-item ">Dashboard</a>
+        <a href="students.html" class="nav-item ">Students</a>
+        <a href="teachers.html" class="nav-item ">Teachers</a>
+        <a href="parents.html" class="nav-item ">Parents</a>
+        <a href="attendance.html" class="nav-item ">Attendance</a>
+        <a href="grades.html" class="nav-item ">Grades</a>
+        <a href="timetable.html" class="nav-item ">Timetable</a>
+        <a href="notices.html" class="nav-item active">Notices</a>
+        <a href="houses.html" class="nav-item ">Houses</a>
+    </nav>
+    <button class="logout-btn" id="logout-btn">Sign out</button>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">Notices</h1>
+        <p class="page-sub">Publish school notices for admins, teachers, students, and parents.</p>
+      </div>
+      <div class="topbar-actions"></div>
+    </header>
+    <div class="content">
+      <div class="module-card" id="notice-form-card">
+        <div class="module-card-title">Create Notice</div>
+        <div class="form-panel" style="margin-top:14px; align-items:start;">
+          <div class="field-group"><label>Title</label><input id="notice-title" /></div>
+          <div class="field-group"><label>Audience</label><select id="notice-audience"><option>All</option><option>Students</option><option>Teachers</option><option>Parents</option><option>Admin</option></select></div>
+          <div class="field-group"><label>Status</label><select id="notice-status"><option>Published</option><option>Unpublished</option></select></div>
+          <div class="field-group full-width" style="grid-column:1 / -1;"><label>Message</label><textarea id="notice-message" rows="4"></textarea></div>
+          <button class="btn-primary" id="publish-notice-btn">Save Notice</button>
+        </div>
+      </div>
+      <div class="filters-bar"><input type="text" id="search-input" class="filter-input search-input" placeholder="Search notices..." /><select id="filter-audience" class="filter-input"><option value="">All Audiences</option><option>All</option><option>Students</option><option>Teachers</option><option>Parents</option><option>Admin</option></select><button class="btn-ghost" id="clear-filters-btn">Clear</button></div>
+      <div id="notices-list"><p class="empty-state">Loading notices...</p></div>
+    </div>
+  </main>
+</div>
+<script type="module" src="../js/notices.js"></script>
+<script type="module" src="../js/sidebar-role.js"></script>
+</body>
+</html>

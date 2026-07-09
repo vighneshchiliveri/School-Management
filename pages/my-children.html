@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JNV School Management — My Children</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/students.css" />
+  <link rel="stylesheet" href="../css/modules.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="logo-text">JNV Portal</span></div>
+    <nav class="sidebar-nav">
+      <a href="parent-dashboard.html" class="nav-item">Dashboard</a>
+      <a href="my-children.html" class="nav-item active">My Children</a>
+      <a href="attendance.html" class="nav-item">Attendance</a>
+      <a href="notices.html" class="nav-item">Notices</a>
+    </nav>
+    <button class="logout-btn" id="logout-btn">Sign out</button>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">My Children</h1>
+        <p class="page-sub">Parent view of linked children, attendance, notices, and basic profile details.</p>
+      </div>
+    </header>
+    <div class="content">
+      <div class="summary-strip" id="children-summary"></div>
+      <div id="children-list"><p class="empty-state">Loading children...</p></div>
+    </div>
+  </main>
+</div>
+<script type="module" src="../js/my-children.js"></script>
+<script type="module" src="../js/sidebar-role.js"></script>
+</body>
+</html>

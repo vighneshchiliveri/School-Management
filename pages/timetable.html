@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JNV School Management — Timetable</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="stylesheet" href="../css/students.css" />
+  <link rel="stylesheet" href="../css/modules.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="logo-text">JNV Portal</span></div>
+    <nav class="sidebar-nav">
+        <a href="admin-dashboard.html" class="nav-item ">Dashboard</a>
+        <a href="students.html" class="nav-item ">Students</a>
+        <a href="teachers.html" class="nav-item ">Teachers</a>
+        <a href="parents.html" class="nav-item ">Parents</a>
+        <a href="attendance.html" class="nav-item ">Attendance</a>
+        <a href="grades.html" class="nav-item ">Grades</a>
+        <a href="timetable.html" class="nav-item active">Timetable</a>
+        <a href="notices.html" class="nav-item ">Notices</a>
+        <a href="houses.html" class="nav-item ">Houses</a>
+    </nav>
+    <button class="logout-btn" id="logout-btn">Sign out</button>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">Timetable</h1>
+        <p class="page-sub">Create and view weekly class timetable periods.</p>
+      </div>
+      <div class="topbar-actions"></div>
+    </header>
+    <div class="content">
+      <div class="module-card">
+        <div class="module-card-title">Add Timetable Period</div>
+        <div class="form-panel" style="margin-top:14px;">
+          <div class="field-group"><label>Class</label><select id="class-input"></select></div>
+          <div class="field-group"><label>Section</label><select id="section-input"></select></div>
+          <div class="field-group"><label>Day</label><select id="day-input"></select></div>
+          <div class="field-group"><label>Period</label><select id="period-input"></select></div>
+          <div class="field-group"><label>Subject</label><input id="subject-input" /></div>
+          <div class="field-group"><label>Teacher</label><input id="teacher-input" /></div>
+          <button class="btn-primary" id="add-period-btn">Save Period</button>
+        </div>
+      </div>
+      <div class="filters-bar">
+        <select id="filter-class" class="filter-input"><option value="">All Classes</option></select>
+        <select id="filter-section" class="filter-input"><option value="">All Sections</option></select>
+        <select id="filter-day" class="filter-input"><option value="">All Days</option></select>
+        <button class="btn-ghost" id="clear-filters-btn">Clear</button>
+      </div>
+      <div class="table-wrap"><table class="data-table"><thead><tr><th>Class</th><th>Section</th><th>Day</th><th>Period</th><th>Subject</th><th>Teacher</th><th>Actions</th></tr></thead><tbody id="timetable-tbody"><tr><td colspan="7" class="table-empty">Loading timetable...</td></tr></tbody></table></div>
+    </div>
+  </main>
+</div>
+<script type="module" src="../js/timetable.js"></script>
+<script type="module" src="../js/sidebar-role.js"></script>
+</body>
+</html>
