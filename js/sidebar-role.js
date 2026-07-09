@@ -1,8 +1,15 @@
-const role = sessionStorage.getItem('role') || 'admin';
+const role = sessionStorage.getItem('role') || 'principal';
 const current = window.location.pathname.split('/').pop();
 const nav = document.querySelector('.sidebar-nav');
 
+const principalItems = [
+  ['principal-dashboard.html', 'Dashboard'], ['students.html', 'Students'], ['teachers.html', 'Teachers'],
+  ['parents.html', 'Parents'], ['attendance.html', 'Attendance'], ['grades.html', 'Grades'],
+  ['timetable.html', 'Timetable'], ['notices.html', 'Notices'], ['houses.html', 'Houses']
+];
+
 const navItems = {
+  principal: principalItems,
   admin: [
     ['admin-dashboard.html', 'Dashboard'], ['students.html', 'Students'], ['teachers.html', 'Teachers'],
     ['parents.html', 'Parents'], ['attendance.html', 'Attendance'], ['grades.html', 'Grades'],
@@ -19,9 +26,10 @@ const navItems = {
 };
 
 if (nav) {
-  const items = navItems[role] || navItems.admin;
+  const items = navItems[role] || principalItems;
   nav.innerHTML = items.map(([href, label]) => {
-    const active = href === current || (current === 'student-profile.html' && href === 'students.html');
+    const isDashboardPair = (current === 'admin-dashboard.html' && href === 'principal-dashboard.html') || (current === 'principal-dashboard.html' && href === 'admin-dashboard.html');
+    const active = href === current || isDashboardPair || (current === 'student-profile.html' && href === 'students.html');
     return `<a href="${href}" class="nav-item ${active ? 'active' : ''}">${label}</a>`;
   }).join('');
 }

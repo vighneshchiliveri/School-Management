@@ -15,7 +15,7 @@ function setRole(role) {
   btnStaff.classList.toggle('active', role === 'staff');
   btnParent.classList.toggle('active', role === 'parent');
   roleHint.innerHTML = role === 'staff'
-    ? 'Signing in as <strong>Admin or Teacher</strong>. Contact your administrator if you need help.'
+    ? 'Signing in as <strong>Principal / Admin or Teacher</strong>. Contact your administrator if you need help.'
     : 'Signing in as <strong>Parent</strong>. Contact the school office if you need help.';
   clearErrors();
 }
@@ -64,7 +64,7 @@ form.addEventListener('submit', async (e) => {
         .single();
 
       if (admin) {
-        role = 'admin';
+        role = 'principal';
         profileId = admin.id;
       } else {
         // Check teachers table
@@ -96,8 +96,8 @@ form.addEventListener('submit', async (e) => {
       sessionStorage.setItem('role', role);
       sessionStorage.setItem('username', username);
 
-      window.location.href = role === 'admin'
-        ? 'pages/admin-dashboard.html'
+      window.location.href = (role === 'principal' || role === 'admin')
+        ? 'pages/principal-dashboard.html'
         : 'pages/teacher-dashboard.html';
 
     } else {
