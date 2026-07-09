@@ -36,6 +36,36 @@ if (role === 'teacher') {
   document.getElementById('import-csv-btn').style.display = 'none';
 }
 
+
+function numericValue(value) {
+  const n = Number(String(value ?? '').trim());
+  return Number.isFinite(n) ? n : null;
+}
+
+function compareStudentOrder(a, b) {
+  const classA = numericValue(a?.class);
+  const classB = numericValue(b?.class);
+  if (classA !== null && classB !== null && classA !== classB) return classA - classB;
+  if (classA !== classB) return classA === null ? 1 : -1;
+
+  const sectionCompare = String(a?.section ?? '').localeCompare(String(b?.section ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+  if (sectionCompare !== 0) return sectionCompare;
+
+  const rollA = numericValue(a?.roll_no);
+  const rollB = numericValue(b?.roll_no);
+  if (rollA !== null && rollB !== null && rollA !== rollB) return rollA - rollB;
+  if (rollA !== rollB) return rollA === null ? 1 : -1;
+
+  const admissionCompare = String(a?.admission_no ?? '').localeCompare(String(b?.admission_no ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+  if (admissionCompare !== 0) return admissionCompare;
+
+  return String(a?.full_name ?? '').localeCompare(String(b?.full_name ?? ''), undefined, { sensitivity: 'base' });
+}
+
+function sortStudentsByRollOrAdmission(rows) {
+  return [...(rows || [])].sort(compareStudentOrder);
+}
+
 // ── Fetch & render ───────────────────────────
 async function fetchStudents() {
   tbody.innerHTML = '<tr><td colspan="9" class="table-empty">Loading...</td></tr>';
@@ -60,11 +90,10 @@ async function fetchStudents() {
   if (gender)   query = query.eq('gender', gender);
   if (blood)    query = query.eq('blood_group', blood);
 
+  // Fetch filtered rows first, then sort in JavaScript so text values like 1, 2, 10
+  // display in true numeric order. Admission number is used as a safe fallback.
   query = query
-    .order('class', { ascending: true })
-    .order('section', { ascending: true })
-    .order('roll_no', { ascending: true })
-    .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
+    .order('admission_no', { ascending: true });
 
   const { data, count, error } = await query;
 
@@ -73,16 +102,19 @@ async function fetchStudents() {
     return;
   }
 
-  totalCount = count || 0;
+  const sortedStudents = sortStudentsByRollOrAdmission(data || []);
+  totalCount = count || sortedStudents.length;
   countEl.textContent = `${totalCount} student${totalCount !== 1 ? 's' : ''} found`;
 
-  if (!data || data.length === 0) {
+  if (!sortedStudents.length) {
     tbody.innerHTML = '<tr><td colspan="9" class="table-empty">No students found.</td></tr>';
     renderPagination();
     return;
   }
 
-  tbody.innerHTML = data.map(s => `
+  const pageStudents = sortedStudents.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  tbody.innerHTML = pageStudents.map(s => `
     <tr>
       <td>${s.admission_no || '—'}</td>
       <td><a href="student-profile.html?id=${s.id}" style="color:#1a3a5c; text-decoration:none; font-weight:500;">${s.full_name}</a></td>
@@ -104,7 +136,7 @@ async function fetchStudents() {
 
   // Attach edit/delete listeners
   tbody.querySelectorAll('.action-edit').forEach(btn => {
-    btn.addEventListener('click', () => openEditModal(btn.dataset.id, data));
+    btn.addEventListener('click', () => openEditModal(btn.dataset.id, sortedStudents));
   });
   tbody.querySelectorAll('.action-delete').forEach(btn => {
     btn.addEventListener('click', () => openDeleteModal(btn.dataset.id, btn.dataset.name));

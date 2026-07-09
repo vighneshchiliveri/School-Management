@@ -1,4 +1,4 @@
-import { supabase, requireSession, initLogout, JNV_HOUSES, display, fillSelect, showTableError } from './app-config.js';
+import { supabase, requireSession, initLogout, JNV_HOUSES, display, fillSelect, showTableError, sortStudentsByRollOrAdmission } from './app-config.js';
 
 await requireSession();
 initLogout();
@@ -13,7 +13,7 @@ houseFilter.addEventListener('change', loadStudents);
 document.getElementById('clear-filters-btn').addEventListener('click', () => { houseFilter.value = ''; loadStudents(); });
 
 async function loadHouses() {
-  const { data: students, error } = await supabase.from('students').select('id, house, gender');
+  const { data: students, error } = await supabase.from('students').select('id, house, gender, class, section, roll_no, admission_no, full_name');
   if (error) {
     grid.innerHTML = `<p class="empty-state">${error.message}</p>`;
     return;
@@ -46,11 +46,12 @@ async function loadStudents() {
   tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Loading students...</td></tr>';
   let query = supabase.from('students').select('admission_no, full_name, class, section, roll_no, parent_phone, house');
   if (houseFilter.value) query = query.eq('house', houseFilter.value);
-  query = query.order('house', { ascending: true }).order('class', { ascending: true }).order('roll_no', { ascending: true });
+  query = query.order('house', { ascending: true }).order('class', { ascending: true }).order('admission_no', { ascending: true });
   const { data, error } = await query;
   if (error) { showTableError(tbody, 6, error, 'students'); return; }
-  if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="table-empty">No students found.</td></tr>'; return; }
-  tbody.innerHTML = data.map(s => `<tr><td>${display(s.admission_no)}</td><td><strong>${display(s.full_name)}</strong><div class="hint-text">${display(s.house, '')}</div></td><td>${display(s.class)}</td><td>${display(s.section)}</td><td>${display(s.roll_no)}</td><td>${display(s.parent_phone)}</td></tr>`).join('');
+  const sortedStudents = sortStudentsByRollOrAdmission(data || []);
+  if (!sortedStudents.length) { tbody.innerHTML = '<tr><td colspan="6" class="table-empty">No students found.</td></tr>'; return; }
+  tbody.innerHTML = sortedStudents.map(s => `<tr><td>${display(s.admission_no)}</td><td><strong>${display(s.full_name)}</strong><div class="hint-text">${display(s.house, '')}</div></td><td>${display(s.class)}</td><td>${display(s.section)}</td><td>${display(s.roll_no)}</td><td>${display(s.parent_phone)}</td></tr>`).join('');
 }
 
 await loadHouses();

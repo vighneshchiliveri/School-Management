@@ -84,3 +84,7 @@ The old `pages/admin-dashboard.html` also continues to work.
 The dashboard now renders a default view immediately and then updates live counts from Supabase, so it will not remain stuck on “Loading...” if a table is empty, missing, blocked by RLS, or slow to respond.
 
 Admin/principal login uses the existing admin credentials in your Supabase Auth and `admins` table. Do not hard-code passwords inside the website files.
+
+## Student Table Sorting
+
+Student lists now display in ascending order by Class, Section, numeric Roll No, and then Admission No. This avoids the common text-sorting problem where roll numbers appear as 1, 10, 11, 2.

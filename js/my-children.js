@@ -1,4 +1,4 @@
-import { supabase, requireSession, initLogout, display, escapeHTML, formatDate, statusBadge } from './app-config.js';
+import { supabase, requireSession, initLogout, display, escapeHTML, formatDate, statusBadge, sortStudentsByRollOrAdmission } from './app-config.js';
 
 const session = await requireSession();
 initLogout();
@@ -24,7 +24,7 @@ async function loadChildren() {
     .select('student_id, students(*)')
     .eq('parent_id', parent.id);
   if (error) { list.innerHTML = `<p class="empty-state">${escapeHTML(error.message)}</p>`; return; }
-  const children = (links || []).map(l => l.students).filter(Boolean);
+  const children = sortStudentsByRollOrAdmission((links || []).map(l => l.students).filter(Boolean));
   summary.innerHTML = `
     <div class="summary-tile"><div class="summary-label">Parent</div><div class="summary-value" style="font-size:1.05rem;">${display(parent.full_name)}</div></div>
     <div class="summary-tile"><div class="summary-label">Children Linked</div><div class="summary-value">${children.length}</div></div>`;

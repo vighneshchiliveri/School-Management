@@ -1,4 +1,4 @@
-import { supabase, requireSession, initLogout, JNV_CLASSES, SECTIONS, todayISO, display, escapeHTML, fillSelect, canWrite } from './app-config.js';
+import { supabase, requireSession, initLogout, JNV_CLASSES, SECTIONS, todayISO, display, escapeHTML, fillSelect, canWrite, sortStudentsByRollOrAdmission } from './app-config.js';
 
 await requireSession();
 initLogout();
@@ -31,10 +31,10 @@ async function loadStudents() {
     .select('id, full_name, admission_no, class, section, roll_no, house')
     .eq('class', cls)
     .eq('section', section)
-    .order('roll_no', { ascending: true });
+    .order('admission_no', { ascending: true });
 
   if (error) { list.innerHTML = `<p class="empty-state">${escapeHTML(error.message)}</p>`; return; }
-  students = data || [];
+  students = sortStudentsByRollOrAdmission(data || []);
   await loadExistingAttendance();
   renderStudents();
 }

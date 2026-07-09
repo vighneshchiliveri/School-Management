@@ -1,4 +1,4 @@
-import { supabase, requireSession, initLogout, JNV_CLASSES, SECTIONS, display, escapeHTML, fillSelect, canWrite } from './app-config.js';
+import { supabase, requireSession, initLogout, JNV_CLASSES, SECTIONS, display, escapeHTML, fillSelect, canWrite, sortStudentsByRollOrAdmission } from './app-config.js';
 
 await requireSession();
 initLogout();
@@ -26,9 +26,9 @@ async function loadStudents() {
   tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Loading students...</td></tr>';
   const { data, error } = await supabase.from('students')
     .select('id, admission_no, full_name, roll_no, class, section')
-    .eq('class', cls).eq('section', section).order('roll_no', { ascending: true });
+    .eq('class', cls).eq('section', section).order('admission_no', { ascending: true });
   if (error) { tbody.innerHTML = `<tr><td colspan="6" class="table-empty">${escapeHTML(error.message)}</td></tr>`; return; }
-  students = data || [];
+  students = sortStudentsByRollOrAdmission(data || []);
   existing = {};
   if (students.length && exam && subject) {
     const { data: grades } = await supabase.from('grades').select('student_id, marks_obtained, grade, remarks').eq('exam_name', exam).eq('subject', subject).in('student_id', students.map(s => s.id));

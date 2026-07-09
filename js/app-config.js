@@ -71,3 +71,32 @@ export function showTableError(tbody, colspan, error, tableName) {
 export function fillSelect(select, values, placeholder = 'Select') {
   select.innerHTML = `<option value="">${escapeHTML(placeholder)}</option>` + values.map(v => `<option>${escapeHTML(v)}</option>`).join('');
 }
+
+export function numericValue(value) {
+  const n = Number(String(value ?? '').trim());
+  return Number.isFinite(n) ? n : null;
+}
+
+export function compareStudentOrder(a, b) {
+  const classA = numericValue(a?.class);
+  const classB = numericValue(b?.class);
+  if (classA !== null && classB !== null && classA !== classB) return classA - classB;
+  if (classA !== classB) return classA === null ? 1 : -1;
+
+  const sectionCompare = String(a?.section ?? '').localeCompare(String(b?.section ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+  if (sectionCompare !== 0) return sectionCompare;
+
+  const rollA = numericValue(a?.roll_no);
+  const rollB = numericValue(b?.roll_no);
+  if (rollA !== null && rollB !== null && rollA !== rollB) return rollA - rollB;
+  if (rollA !== rollB) return rollA === null ? 1 : -1;
+
+  const admissionCompare = String(a?.admission_no ?? '').localeCompare(String(b?.admission_no ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+  if (admissionCompare !== 0) return admissionCompare;
+
+  return String(a?.full_name ?? '').localeCompare(String(b?.full_name ?? ''), undefined, { sensitivity: 'base' });
+}
+
+export function sortStudentsByRollOrAdmission(rows) {
+  return [...(rows || [])].sort(compareStudentOrder);
+}
