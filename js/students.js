@@ -1,340 +1,395 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import {
+  supabase, requireSession, initLogout, isPrincipal, display, escapeHTML,
+  sortStudentsByRollOrAdmission, showToast, setButtonLoading, confirmAction,
+  logActivity, sanitizeSearchTerm, downloadCSV, parseCSV
+} from './app-config.js';
 
-const SUPABASE_URL = 'https://lwoyqujqcmigfqtlbfvc.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3b3lxdWpxY21pZ2ZxdGxiZnZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMTU3NzMsImV4cCI6MjA5NzY5MTc3M30.bCtMtepa5QD1kInndVUdohTmm2-CSZBENF8IjG1mbtk';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+await requireSession(['principal', 'teacher']);
+initLogout();
 
-// Auth guard
-const { data: { session } } = await supabase.auth.getSession();
-if (!session) { window.location.href = '../index.html'; }
-
-const role = sessionStorage.getItem('role');
-
-// Pagination
 const PAGE_SIZE = 20;
 let currentPage = 1;
 let totalCount = 0;
 let editingId = null;
-let deleteId = null;
+let archiveId = null;
+let allFilteredRows = [];
+let formDirty = false;
+let parsedImport = [];
 
-// DOM refs
-const tbody       = document.getElementById('students-tbody');
-const countEl     = document.getElementById('student-count');
-const pagination  = document.getElementById('pagination');
+const tbody = document.getElementById('students-tbody');
+const countEl = document.getElementById('student-count');
+const pagination = document.getElementById('pagination');
 const searchInput = document.getElementById('search-input');
+const addBtn = document.getElementById('add-student-btn');
+const importBtn = document.getElementById('import-csv-btn');
+const modalOverlay = document.getElementById('modal-overlay');
+const modalTitle = document.getElementById('modal-title');
+const studentForm = document.getElementById('student-form');
+const modalSubmit = document.getElementById('modal-submit');
+const csvModal = document.getElementById('csv-modal-overlay');
+const csvStatus = document.getElementById('csv-status');
+const csvUploadBtn = document.getElementById('csv-upload-btn');
 
-// Logout
-document.getElementById('logout-btn').addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  sessionStorage.clear();
-  window.location.href = '../index.html';
-});
-
-// Hide add/import for teachers
-if (role === 'teacher') {
-  document.getElementById('add-student-btn').style.display = 'none';
-  document.getElementById('import-csv-btn').style.display = 'none';
+if (!isPrincipal()) {
+  addBtn.style.display = 'none';
+  importBtn.style.display = 'none';
 }
 
+addExportButton();
 
-function numericValue(value) {
-  const n = Number(String(value ?? '').trim());
-  return Number.isFinite(n) ? n : null;
-}
-
-function compareStudentOrder(a, b) {
-  const classA = numericValue(a?.class);
-  const classB = numericValue(b?.class);
-  if (classA !== null && classB !== null && classA !== classB) return classA - classB;
-  if (classA !== classB) return classA === null ? 1 : -1;
-
-  const sectionCompare = String(a?.section ?? '').localeCompare(String(b?.section ?? ''), undefined, { numeric: true, sensitivity: 'base' });
-  if (sectionCompare !== 0) return sectionCompare;
-
-  const rollA = numericValue(a?.roll_no);
-  const rollB = numericValue(b?.roll_no);
-  if (rollA !== null && rollB !== null && rollA !== rollB) return rollA - rollB;
-  if (rollA !== rollB) return rollA === null ? 1 : -1;
-
-  const admissionCompare = String(a?.admission_no ?? '').localeCompare(String(b?.admission_no ?? ''), undefined, { numeric: true, sensitivity: 'base' });
-  if (admissionCompare !== 0) return admissionCompare;
-
-  return String(a?.full_name ?? '').localeCompare(String(b?.full_name ?? ''), undefined, { sensitivity: 'base' });
-}
-
-function sortStudentsByRollOrAdmission(rows) {
-  return [...(rows || [])].sort(compareStudentOrder);
-}
-
-// ── Fetch & render ───────────────────────────
 async function fetchStudents() {
-  tbody.innerHTML = '<tr><td colspan="9" class="table-empty">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9" class="table-empty">Loading students…</td></tr>';
+  let query = supabase.from('students').select('*');
 
-  let query = supabase.from('students').select('*', { count: 'exact' });
+  const search = sanitizeSearchTerm(searchInput.value);
+  const cls = value('filter-class');
+  const section = value('filter-section');
+  const house = value('filter-house');
+  const category = value('filter-category');
+  const gender = value('filter-gender');
+  const blood = value('filter-blood');
 
-  const search   = searchInput.value.trim();
-  const cls      = document.getElementById('filter-class').value;
-  const section  = document.getElementById('filter-section').value;
-  const house    = document.getElementById('filter-house').value;
-  const category = document.getElementById('filter-category').value;
-  const gender   = document.getElementById('filter-gender').value;
-  const blood    = document.getElementById('filter-blood').value;
-
-  if (search) {
-    query = query.or(`full_name.ilike.%${search}%,admission_no.ilike.%${search}%`);
-  }
-  if (cls)      query = query.eq('class', cls);
-  if (section)  query = query.eq('section', section);
-  if (house)    query = query.eq('house', house);
+  if (search) query = query.or(`full_name.ilike.%${search}%,admission_no.ilike.%${search}%,father_name.ilike.%${search}%,mother_name.ilike.%${search}%`);
+  if (cls) query = query.eq('class', cls);
+  if (section) query = query.eq('section', section);
+  if (house) query = query.eq('house', house);
   if (category) query = query.eq('category', category);
-  if (gender)   query = query.eq('gender', gender);
-  if (blood)    query = query.eq('blood_group', blood);
+  if (gender) query = query.eq('gender', gender);
+  if (blood) query = query.eq('blood_group', blood);
+  query = query.order('admission_no', { ascending: true });
 
-  // Fetch filtered rows first, then sort in JavaScript so text values like 1, 2, 10
-  // display in true numeric order. Admission number is used as a safe fallback.
-  query = query
-    .order('admission_no', { ascending: true });
-
-  const { data, count, error } = await query;
-
+  const { data, error } = await query;
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="9" class="table-empty">Error loading students.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="table-empty">${escapeHTML(error.message)}</td></tr>`;
+    showToast('Unable to load students.', 'error');
     return;
   }
 
-  const sortedStudents = sortStudentsByRollOrAdmission(data || []);
-  totalCount = count || sortedStudents.length;
-  countEl.textContent = `${totalCount} student${totalCount !== 1 ? 's' : ''} found`;
+  allFilteredRows = sortStudentsByRollOrAdmission((data || []).filter(row => !row.is_archived));
+  totalCount = allFilteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  countEl.textContent = `${totalCount} student${totalCount === 1 ? '' : 's'} found`;
 
-  if (!sortedStudents.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="table-empty">No students found.</td></tr>';
-    renderPagination();
+  if (!allFilteredRows.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="table-empty">No students match the selected filters.</td></tr>';
+    pagination.innerHTML = '';
     return;
   }
 
-  const pageStudents = sortedStudents.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  tbody.innerHTML = pageStudents.map(s => `
+  const pageRows = allFilteredRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  tbody.innerHTML = pageRows.map(student => `
     <tr>
-      <td>${s.admission_no || '—'}</td>
-      <td><a href="student-profile.html?id=${s.id}" style="color:#1a3a5c; text-decoration:none; font-weight:500;">${s.full_name}</a></td>
-      <td>${s.class || '—'}</td>
-      <td>${s.section || '—'}</td>
-      <td>${s.roll_no || '—'}</td>
-      <td>${s.gender || '—'}</td>
-      <td>${s.house || '—'}</td>
-      <td>${s.category || '—'}</td>
+      <td>${display(student.admission_no)}</td>
+      <td><a href="student-profile.html?id=${encodeURIComponent(student.id)}" class="text-link">${display(student.full_name)}</a></td>
+      <td>${display(student.class)}</td>
+      <td>${display(student.section)}</td>
+      <td>${display(student.roll_no)}</td>
+      <td>${display(student.gender)}</td>
+      <td>${display(student.house)}</td>
+      <td>${display(student.category)}</td>
       <td>
-        <button class="action-btn action-view" onclick="window.location.href='student-profile.html?id=${s.id}'">View</button>
-        ${role !== 'teacher' ? `
-          <button class="action-btn action-edit" data-id="${s.id}">Edit</button>
-          <button class="action-btn action-delete" data-id="${s.id}" data-name="${s.full_name}">Delete</button>
-        ` : ''}
+        <button class="action-btn action-view" data-view="${student.id}">View</button>
+        ${isPrincipal() ? `<button class="action-btn action-edit" data-edit="${student.id}">Edit</button><button class="action-btn action-delete" data-archive="${student.id}" data-name="${escapeHTML(student.full_name)}">Archive</button>` : ''}
       </td>
-    </tr>
-  `).join('');
+    </tr>`).join('');
 
-  // Attach edit/delete listeners
-  tbody.querySelectorAll('.action-edit').forEach(btn => {
-    btn.addEventListener('click', () => openEditModal(btn.dataset.id, sortedStudents));
-  });
-  tbody.querySelectorAll('.action-delete').forEach(btn => {
-    btn.addEventListener('click', () => openDeleteModal(btn.dataset.id, btn.dataset.name));
-  });
-
+  tbody.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => {
+    window.location.href = `student-profile.html?id=${encodeURIComponent(button.dataset.view)}`;
+  }));
+  tbody.querySelectorAll('[data-edit]').forEach(button => button.addEventListener('click', () => openEditModal(button.dataset.edit)));
+  tbody.querySelectorAll('[data-archive]').forEach(button => button.addEventListener('click', () => archiveStudent(button.dataset.archive, button.dataset.name)));
   renderPagination();
 }
 
 function renderPagination() {
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   if (totalPages <= 1) { pagination.innerHTML = ''; return; }
-
-  let html = '';
-  for (let i = 1; i <= totalPages; i++) {
-    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
-  }
-  pagination.innerHTML = html;
-  pagination.querySelectorAll('.page-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentPage = parseInt(btn.dataset.page);
-      fetchStudents();
-    });
-  });
+  const start = Math.max(1, currentPage - 2);
+  const end = Math.min(totalPages, currentPage + 2);
+  const buttons = [];
+  if (currentPage > 1) buttons.push(`<button class="page-btn" data-page="${currentPage - 1}">Previous</button>`);
+  for (let page = start; page <= end; page++) buttons.push(`<button class="page-btn ${page === currentPage ? 'active' : ''}" data-page="${page}" ${page === currentPage ? 'aria-current="page"' : ''}>${page}</button>`);
+  if (currentPage < totalPages) buttons.push(`<button class="page-btn" data-page="${currentPage + 1}">Next</button>`);
+  pagination.innerHTML = buttons.join('');
+  pagination.querySelectorAll('[data-page]').forEach(button => button.addEventListener('click', () => {
+    currentPage = Number(button.dataset.page);
+    renderCurrentPage();
+  }));
 }
 
-// ── Filters ──────────────────────────────────
+function renderCurrentPage() {
+  // Reuse already fetched data without another network request.
+  const pageRows = allFilteredRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  if (!pageRows.length) { fetchStudents(); return; }
+  tbody.innerHTML = pageRows.map(student => `
+    <tr><td>${display(student.admission_no)}</td><td><a href="student-profile.html?id=${encodeURIComponent(student.id)}" class="text-link">${display(student.full_name)}</a></td><td>${display(student.class)}</td><td>${display(student.section)}</td><td>${display(student.roll_no)}</td><td>${display(student.gender)}</td><td>${display(student.house)}</td><td>${display(student.category)}</td><td><button class="action-btn action-view" data-view="${student.id}">View</button>${isPrincipal() ? `<button class="action-btn action-edit" data-edit="${student.id}">Edit</button><button class="action-btn action-delete" data-archive="${student.id}" data-name="${escapeHTML(student.full_name)}">Archive</button>` : ''}</td></tr>`).join('');
+  tbody.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => window.location.href = `student-profile.html?id=${encodeURIComponent(button.dataset.view)}`));
+  tbody.querySelectorAll('[data-edit]').forEach(button => button.addEventListener('click', () => openEditModal(button.dataset.edit)));
+  tbody.querySelectorAll('[data-archive]').forEach(button => button.addEventListener('click', () => archiveStudent(button.dataset.archive, button.dataset.name)));
+  renderPagination();
+  document.querySelector('.table-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function value(id) { return document.getElementById(id)?.value || ''; }
+
 let searchTimer;
 searchInput.addEventListener('input', () => {
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => { currentPage = 1; fetchStudents(); }, 300);
+  searchTimer = setTimeout(() => { currentPage = 1; fetchStudents(); }, 320);
 });
-
-['filter-class','filter-section','filter-house','filter-category','filter-gender','filter-blood'].forEach(id => {
+['filter-class', 'filter-section', 'filter-house', 'filter-category', 'filter-gender', 'filter-blood'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => { currentPage = 1; fetchStudents(); });
 });
-
 document.getElementById('clear-filters-btn').addEventListener('click', () => {
   searchInput.value = '';
-  ['filter-class','filter-section','filter-house','filter-category','filter-gender','filter-blood'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
+  ['filter-class', 'filter-section', 'filter-house', 'filter-category', 'filter-gender', 'filter-blood'].forEach(id => document.getElementById(id).value = '');
   currentPage = 1;
   fetchStudents();
 });
 
-// ── Add/Edit Modal ────────────────────────────
-const modalOverlay = document.getElementById('modal-overlay');
-const modalTitle   = document.getElementById('modal-title');
-const studentForm  = document.getElementById('student-form');
-const modalSubmit  = document.getElementById('modal-submit');
+addBtn.addEventListener('click', () => openAddModal());
+['modal-close', 'modal-cancel'].forEach(id => document.getElementById(id).addEventListener('click', closeStudentModal));
+studentForm.addEventListener('input', () => { formDirty = true; });
+modalOverlay.addEventListener('click', event => { if (event.target === modalOverlay) closeStudentModal(); });
 
-document.getElementById('add-student-btn').addEventListener('click', () => {
+function openAddModal() {
   editingId = null;
   modalTitle.textContent = 'Add Student';
   modalSubmit.textContent = 'Save Student';
   studentForm.reset();
+  clearValidation(studentForm);
+  formDirty = false;
   modalOverlay.hidden = false;
-});
+  studentForm.full_name.focus();
+}
 
-function openEditModal(id, data) {
-  const s = data.find(x => x.id === id);
-  if (!s) return;
+function openEditModal(id) {
+  const student = allFilteredRows.find(row => String(row.id) === String(id));
+  if (!student) return;
   editingId = id;
   modalTitle.textContent = 'Edit Student';
   modalSubmit.textContent = 'Update Student';
-
-  const f = studentForm;
-  f.full_name.value    = s.full_name || '';
-  f.admission_no.value = s.admission_no || '';
-  f.class.value        = s.class || '';
-  f.section.value      = s.section || '';
-  f.roll_no.value      = s.roll_no || '';
-  f.date_of_birth.value = s.date_of_birth || '';
-  f.gender.value       = s.gender || '';
-  f.blood_group.value  = s.blood_group || '';
-  f.category.value     = s.category || '';
-  f.house.value        = s.house || '';
-  f.father_name.value  = s.father_name || '';
-  f.mother_name.value  = s.mother_name || '';
-  f.parent_phone.value = s.parent_phone || '';
-  f.address.value      = s.address || '';
-  modalOverlay.hidden  = false;
+  studentForm.reset();
+  clearValidation(studentForm);
+  ['full_name', 'admission_no', 'class', 'section', 'roll_no', 'date_of_birth', 'gender', 'blood_group', 'category', 'house', 'father_name', 'mother_name', 'parent_phone', 'address'].forEach(key => {
+    if (studentForm[key]) studentForm[key].value = student[key] || '';
+  });
+  formDirty = false;
+  modalOverlay.hidden = false;
+  studentForm.full_name.focus();
 }
 
-['modal-close','modal-cancel'].forEach(id => {
-  document.getElementById(id).addEventListener('click', () => { modalOverlay.hidden = true; });
-});
-
-studentForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  modalSubmit.disabled = true;
-  modalSubmit.textContent = 'Saving...';
-
-  const f = studentForm;
-  const payload = {
-    full_name:    f.full_name.value.trim(),
-    admission_no: f.admission_no.value.trim(),
-    class:        f.class.value,
-    section:      f.section.value,
-    roll_no:      f.roll_no.value.trim(),
-    date_of_birth: f.date_of_birth.value || null,
-    gender:       f.gender.value,
-    blood_group:  f.blood_group.value || null,
-    category:     f.category.value,
-    house:        f.house.value || null,
-    father_name:  f.father_name.value.trim() || null,
-    mother_name:  f.mother_name.value.trim() || null,
-    parent_phone: f.parent_phone.value.trim() || null,
-    address:      f.address.value.trim() || null,
-  };
-
-  let error;
-  if (editingId) {
-    ({ error } = await supabase.from('students').update(payload).eq('id', editingId));
-  } else {
-    ({ error } = await supabase.from('students').insert(payload));
-  }
-
-  modalSubmit.disabled = false;
-  modalSubmit.textContent = editingId ? 'Update Student' : 'Save Student';
-
-  if (error) { alert('Error: ' + error.message); return; }
-
+async function closeStudentModal() {
+  if (formDirty && !await confirmAction('Discard unsaved student changes?', 'Discard')) return;
   modalOverlay.hidden = true;
-  fetchStudents();
-});
-
-// ── Delete Modal ──────────────────────────────
-function openDeleteModal(id, name) {
-  deleteId = id;
-  document.getElementById('delete-student-name').textContent = name;
-  document.getElementById('delete-modal-overlay').hidden = false;
+  formDirty = false;
 }
 
-document.getElementById('delete-modal-close').addEventListener('click', () => {
-  document.getElementById('delete-modal-overlay').hidden = true;
-});
-document.getElementById('delete-cancel').addEventListener('click', () => {
-  document.getElementById('delete-modal-overlay').hidden = true;
-});
-document.getElementById('delete-confirm').addEventListener('click', async () => {
-  if (!deleteId) return;
-  const { error } = await supabase.from('students').delete().eq('id', deleteId);
-  if (error) { alert('Error: ' + error.message); return; }
-  document.getElementById('delete-modal-overlay').hidden = true;
-  fetchStudents();
-});
+studentForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  clearValidation(studentForm);
+  const payload = studentPayload();
+  if (!validateStudent(payload)) return;
 
-// ── CSV Import ────────────────────────────────
-document.getElementById('import-csv-btn').addEventListener('click', () => {
-  document.getElementById('csv-modal-overlay').hidden = false;
-});
-document.getElementById('csv-modal-close').addEventListener('click', () => {
-  document.getElementById('csv-modal-overlay').hidden = true;
-});
-
-document.getElementById('csv-upload-btn').addEventListener('click', async () => {
-  const file = document.getElementById('csv-file-input').files[0];
-  const status = document.getElementById('csv-status');
-  if (!file) { status.textContent = 'Please select a CSV file.'; return; }
-
-  status.textContent = 'Parsing...';
-  const text = await file.text();
-  const lines = text.trim().split('\n');
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/ /g,'_'));
-
-  const rows = [];
-  const errors = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const vals = lines[i].split(',').map(v => v.trim());
-    if (vals.length < 3) continue;
-    const row = {};
-    headers.forEach((h, idx) => { row[h] = vals[idx] || null; });
-
-    if (!row.full_name || !row.class || !row.section) {
-      errors.push(`Row ${i + 1}: missing required fields`);
-      continue;
-    }
-    rows.push(row);
-  }
-
-  if (rows.length === 0) {
-    status.textContent = 'No valid rows found. ' + errors.join(', ');
-    return;
-  }
-
-  status.textContent = `Importing ${rows.length} students...`;
-  const { error } = await supabase.from('students').upsert(rows, { onConflict: 'admission_no' });
+  setButtonLoading(modalSubmit, true, 'Saving…');
+  const { error } = editingId
+    ? await supabase.from('students').update(payload).eq('id', editingId)
+    : await supabase.from('students').insert(payload);
+  setButtonLoading(modalSubmit, false);
 
   if (error) {
-    status.textContent = 'Import failed: ' + error.message;
+    showToast(`Student could not be saved: ${error.message}`, 'error');
     return;
   }
 
-  status.textContent = `✓ Imported ${rows.length} students. ${errors.length > 0 ? errors.length + ' rows skipped.' : ''}`;
-  fetchStudents();
+  await logActivity(editingId ? 'Student updated' : 'Student added', `${payload.full_name} · Class ${payload.class}${payload.section}`);
+  showToast(editingId ? 'Student updated successfully.' : 'Student added successfully.', 'success');
+  modalOverlay.hidden = true;
+  formDirty = false;
+  await fetchStudents();
 });
 
-// Init
-fetchStudents();
+function studentPayload() {
+  const form = studentForm;
+  return {
+    full_name: form.full_name.value.trim(),
+    admission_no: form.admission_no.value.trim(),
+    class: form.class.value,
+    section: form.section.value,
+    roll_no: form.roll_no.value.trim(),
+    date_of_birth: form.date_of_birth.value || null,
+    gender: form.gender.value,
+    blood_group: form.blood_group.value || null,
+    category: form.category.value,
+    house: form.house.value || null,
+    father_name: form.father_name.value.trim() || null,
+    mother_name: form.mother_name.value.trim() || null,
+    parent_phone: form.parent_phone.value.trim() || null,
+    address: form.address.value.trim() || null
+  };
+}
+
+function validateStudent(payload) {
+  let valid = true;
+  if (!payload.full_name) valid = fieldInvalid(studentForm.full_name, 'Full name is required.') && valid;
+  if (!payload.admission_no) valid = fieldInvalid(studentForm.admission_no, 'Admission number is required.') && valid;
+  if (!payload.class) valid = fieldInvalid(studentForm.class, 'Class is required.') && valid;
+  if (!payload.section) valid = fieldInvalid(studentForm.section, 'Section is required.') && valid;
+  if (payload.parent_phone && !/^[0-9+\-\s]{7,15}$/.test(payload.parent_phone)) valid = fieldInvalid(studentForm.parent_phone, 'Enter a valid phone number.') && valid;
+  if (!valid) showToast('Please correct the highlighted fields.', 'warning');
+  return valid;
+}
+
+function fieldInvalid(control, message) {
+  control.classList.add('invalid-field');
+  control.setAttribute('aria-invalid', 'true');
+  let error = control.parentElement.querySelector('.field-error-text');
+  if (!error) {
+    error = document.createElement('span');
+    error.className = 'field-error-text';
+    control.insertAdjacentElement('afterend', error);
+  }
+  error.textContent = message;
+  control.focus();
+  return false;
+}
+
+function clearValidation(form) {
+  form.querySelectorAll('.invalid-field').forEach(control => { control.classList.remove('invalid-field'); control.removeAttribute('aria-invalid'); });
+  form.querySelectorAll('.field-error-text').forEach(error => error.remove());
+}
+
+async function archiveStudent(id, name) {
+  archiveId = id;
+  const confirmed = await confirmAction(`Archive ${name}? The record will be hidden but retained for audit and restoration.`, 'Archive');
+  if (!confirmed) return;
+  const { error } = await supabase.from('students').update({ is_archived: true, archived_at: new Date().toISOString() }).eq('id', archiveId);
+  if (error) {
+    showToast(`Archive failed. Run the updated Supabase schema first. ${error.message}`, 'error', 6500);
+    return;
+  }
+  await logActivity('Student archived', name);
+  showToast('Student archived safely.', 'success');
+  await fetchStudents();
+}
+
+function addExportButton() {
+  const actions = document.querySelector('.topbar-actions');
+  if (!actions || document.getElementById('export-students-btn')) return;
+  const button = document.createElement('button');
+  button.id = 'export-students-btn';
+  button.className = 'btn-secondary';
+  button.type = 'button';
+  button.textContent = 'Export CSV';
+  button.addEventListener('click', () => {
+    if (!allFilteredRows.length) { showToast('No student records to export.', 'warning'); return; }
+    downloadCSV('jnv-students.csv', allFilteredRows, [
+      { label: 'Admission No', value: 'admission_no' }, { label: 'Full Name', value: 'full_name' },
+      { label: 'Class', value: 'class' }, { label: 'Section', value: 'section' }, { label: 'Roll No', value: 'roll_no' },
+      { label: 'Gender', value: 'gender' }, { label: 'House', value: 'house' }, { label: 'Category', value: 'category' },
+      { label: 'Father Name', value: 'father_name' }, { label: 'Mother Name', value: 'mother_name' },
+      { label: 'Parent Phone', value: 'parent_phone' }, { label: 'Address', value: 'address' }
+    ]);
+    showToast('Student CSV exported.', 'success');
+  });
+  actions.prepend(button);
+}
+
+importBtn.addEventListener('click', () => {
+  parsedImport = [];
+  document.getElementById('csv-file-input').value = '';
+  csvStatus.textContent = 'Select a CSV file to validate and preview it before importing.';
+  removeCSVPreview();
+  csvUploadBtn.textContent = 'Validate CSV';
+  csvModal.hidden = false;
+});
+document.getElementById('csv-modal-close').addEventListener('click', () => { csvModal.hidden = true; });
+document.getElementById('csv-file-input').addEventListener('change', () => {
+  parsedImport = [];
+  csvUploadBtn.textContent = 'Validate CSV';
+  csvStatus.textContent = 'File selected. Click Validate CSV.';
+  removeCSVPreview();
+});
+
+csvUploadBtn.addEventListener('click', async () => {
+  if (parsedImport.length) {
+    await importValidatedRows();
+    return;
+  }
+  const file = document.getElementById('csv-file-input').files[0];
+  if (!file) { showToast('Select a CSV file first.', 'warning'); return; }
+  setButtonLoading(csvUploadBtn, true, 'Validating…');
+  try {
+    const matrix = parseCSV(await file.text());
+    const result = validateCSV(matrix);
+    parsedImport = result.rows;
+    renderCSVPreview(result.rows, result.errors);
+    csvStatus.textContent = `${result.rows.length} valid row${result.rows.length === 1 ? '' : 's'} ready. ${result.errors.length ? `${result.errors.length} row issue${result.errors.length === 1 ? '' : 's'} found.` : 'No row errors found.'}`;
+    if (result.rows.length) csvUploadBtn.textContent = `Import ${result.rows.length} Students`;
+  } catch (error) {
+    showToast(`CSV could not be read: ${error.message}`, 'error');
+  } finally {
+    if (!parsedImport.length) setButtonLoading(csvUploadBtn, false);
+    else { csvUploadBtn.disabled = false; delete csvUploadBtn.dataset.originalText; }
+  }
+});
+
+function validateCSV(matrix) {
+  if (matrix.length < 2) throw new Error('The CSV has no data rows.');
+  const headers = matrix[0].map(header => header.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''));
+  const required = ['full_name', 'class', 'section'];
+  const missing = required.filter(header => !headers.includes(header));
+  if (missing.length) throw new Error(`Missing required columns: ${missing.join(', ')}`);
+
+  const allowed = new Set(['full_name','admission_no','class','section','roll_no','date_of_birth','gender','blood_group','category','house','father_name','mother_name','parent_phone','address']);
+  const rows = [];
+  const errors = [];
+  matrix.slice(1).forEach((values, index) => {
+    const row = {};
+    headers.forEach((header, column) => { if (allowed.has(header)) row[header] = values[column]?.trim() || null; });
+    const rowNumber = index + 2;
+    if (!row.full_name || !row.class || !row.section) { errors.push(`Row ${rowNumber}: full_name, class and section are required.`); return; }
+    if (!['6','7','8','9','10','11','12'].includes(String(row.class))) { errors.push(`Row ${rowNumber}: invalid class ${row.class}.`); return; }
+    if (!['A','B'].includes(String(row.section).toUpperCase())) { errors.push(`Row ${rowNumber}: invalid section ${row.section}.`); return; }
+    row.section = String(row.section).toUpperCase();
+    rows.push(row);
+  });
+  return { rows, errors };
+}
+
+function renderCSVPreview(rows, errors) {
+  removeCSVPreview();
+  const preview = document.createElement('div');
+  preview.id = 'csv-preview';
+  preview.className = 'csv-preview';
+  preview.innerHTML = `<table class="data-table"><thead><tr><th>Full Name</th><th>Admission No</th><th>Class</th><th>Section</th></tr></thead><tbody>${rows.slice(0, 8).map(row => `<tr><td>${display(row.full_name)}</td><td>${display(row.admission_no)}</td><td>${display(row.class)}</td><td>${display(row.section)}</td></tr>`).join('')}</tbody></table>${rows.length > 8 ? `<p class="hint-text" style="padding:8px 12px;">Showing first 8 of ${rows.length} valid rows.</p>` : ''}${errors.length ? `<div class="setup-banner" style="margin:10px;">${errors.slice(0, 5).map(escapeHTML).join('<br>')}${errors.length > 5 ? '<br>More errors omitted…' : ''}</div>` : ''}`;
+  csvStatus.insertAdjacentElement('afterend', preview);
+}
+
+function removeCSVPreview() { document.getElementById('csv-preview')?.remove(); }
+
+async function importValidatedRows() {
+  setButtonLoading(csvUploadBtn, true, 'Importing…');
+  const { error } = await supabase.from('students').upsert(parsedImport, { onConflict: 'admission_no' });
+  setButtonLoading(csvUploadBtn, false);
+  if (error) { showToast(`Import failed: ${error.message}`, 'error'); return; }
+  await logActivity('Student CSV imported', `${parsedImport.length} records processed`);
+  showToast(`${parsedImport.length} students imported successfully.`, 'success');
+  csvStatus.textContent = `Imported ${parsedImport.length} students successfully.`;
+  parsedImport = [];
+  csvUploadBtn.textContent = 'Validate CSV';
+  await fetchStudents();
+}
+
+window.addEventListener('beforeunload', event => {
+  if (!modalOverlay.hidden && formDirty) {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+});
+
+await fetchStudents();
+const params = new URLSearchParams(window.location.search);
+if (params.get('action') === 'add' && isPrincipal()) openAddModal();
+if (params.get('edit') && isPrincipal()) openEditModal(params.get('edit'));

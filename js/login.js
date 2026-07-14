@@ -1,162 +1,105 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { supabase, resolveUserProfile } from './app-config.js';
 
-const SUPABASE_URL = 'https://lwoyqujqcmigfqtlbfvc.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3b3lxdWpxY21pZ2ZxdGxiZnZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMTU3NzMsImV4cCI6MjA5NzY5MTc3M30.bCtMtepa5QD1kInndVUdohTmm2-CSZBENF8IjG1mbtk';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// ── Role toggle ──────────────────────────────
-const btnStaff  = document.getElementById('btn-staff');
+const btnStaff = document.getElementById('btn-staff');
 const btnParent = document.getElementById('btn-parent');
-const roleHint  = document.getElementById('role-hint');
+const roleHint = document.getElementById('role-hint');
 let currentRole = 'staff';
+
+function destination(role) {
+  if (role === 'teacher') return 'pages/teacher-dashboard.html';
+  if (role === 'parent') return 'pages/parent-dashboard.html';
+  return 'pages/principal-dashboard.html';
+}
 
 function setRole(role) {
   currentRole = role;
-  btnStaff.classList.toggle('active', role === 'staff');
-  btnParent.classList.toggle('active', role === 'parent');
-  roleHint.innerHTML = role === 'staff'
-    ? 'Signing in as <strong>Principal / Admin or Teacher</strong>. Contact your administrator if you need help.'
-    : 'Signing in as <strong>Parent</strong>. Contact the school office if you need help.';
+  const staffActive = role === 'staff';
+  btnStaff.classList.toggle('active', staffActive);
+  btnParent.classList.toggle('active', !staffActive);
+  btnStaff.setAttribute('aria-pressed', String(staffActive));
+  btnParent.setAttribute('aria-pressed', String(!staffActive));
+  roleHint.innerHTML = staffActive
+    ? 'Signing in as <strong>Principal or Teacher</strong>. Your role is verified after authentication.'
+    : 'Signing in as <strong>Parent</strong>. You can access only linked children and published notices.';
   clearErrors();
 }
 
 btnStaff.addEventListener('click', () => setRole('staff'));
 btnParent.addEventListener('click', () => setRole('parent'));
 
-// ── Password show/hide ───────────────────────
-const passwordInput  = document.getElementById('password');
+const passwordInput = document.getElementById('password');
 const togglePassword = document.getElementById('toggle-password');
-
 togglePassword.addEventListener('click', () => {
   const show = passwordInput.type === 'password';
   passwordInput.type = show ? 'text' : 'password';
   togglePassword.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
 });
 
-// ── Form submit ──────────────────────────────
-const form        = document.getElementById('login-form');
-const submitBtn   = document.getElementById('submit-btn');
-const btnLabel    = submitBtn.querySelector('.btn-label');
-const btnSpinner  = submitBtn.querySelector('.btn-spinner');
-const formError   = document.getElementById('form-error');
+const form = document.getElementById('login-form');
+const submitBtn = document.getElementById('submit-btn');
+const btnLabel = submitBtn.querySelector('.btn-label');
+const btnSpinner = submitBtn.querySelector('.btn-spinner');
+const formError = document.getElementById('form-error');
 const formErrorTx = document.getElementById('form-error-text');
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
+const queryError = new URLSearchParams(window.location.search).get('error');
+if (queryError) showFormError(queryError);
+
+form.addEventListener('submit', async event => {
+  event.preventDefault();
   if (!validateForm()) return;
 
   const username = document.getElementById('username').value.trim().toLowerCase();
-  const password = document.getElementById('password').value;
-
+  const password = passwordInput.value;
   setLoading(true);
   clearErrors();
 
   try {
-    let role = null;
-    let profileId = null;
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: `${username}@school.local`,
+      password
+    });
+    if (error || !data.session) throw new Error('Incorrect username or password. Please try again.');
 
-    if (currentRole === 'staff') {
-      // Check admins table first
-      const { data: admin } = await supabase
-        .from('admins')
-        .select('id, username, full_name')
-        .eq('username', username)
-        .single();
-
-      if (admin) {
-        role = 'principal';
-        profileId = admin.id;
-      } else {
-        // Check teachers table
-        const { data: teacher } = await supabase
-          .from('teachers')
-          .select('id, username, full_name')
-          .eq('username', username)
-          .single();
-
-        if (teacher) {
-          role = 'teacher';
-          profileId = teacher.id;
-        }
-      }
-
-      if (!role) {
-        throw new Error('Username not found. Please check and try again.');
-      }
-
-      // Sign in via Supabase Auth using username as email (username@school.local)
-      const { error } = await supabase.auth.signInWithPassword({
-        email: `${username}@school.local`,
-        password
-      });
-
-      if (error) throw new Error('Incorrect password. Please try again.');
-
-      // Store role in sessionStorage for dashboard use
-      sessionStorage.setItem('role', role);
-      sessionStorage.setItem('username', username);
-
-      window.location.href = (role === 'principal' || role === 'admin')
-        ? 'pages/principal-dashboard.html'
-        : 'pages/teacher-dashboard.html';
-
-    } else {
-      // Parent login
-      const { data: parent } = await supabase
-        .from('parents')
-        .select('id, username, full_name')
-        .eq('username', username)
-        .single();
-
-      if (!parent) {
-        throw new Error('Username not found. Please check and try again.');
-      }
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email: `${username}@school.local`,
-        password
-      });
-
-      if (error) throw new Error('Incorrect password. Please try again.');
-
-      sessionStorage.setItem('role', 'parent');
-      sessionStorage.setItem('username', username);
-
-      window.location.href = 'pages/parent-dashboard.html';
+    const profile = await resolveUserProfile(data.session);
+    const roleMatchesToggle = currentRole === 'parent' ? profile.role === 'parent' : profile.role !== 'parent';
+    if (!roleMatchesToggle) {
+      await supabase.auth.signOut();
+      sessionStorage.clear();
+      throw new Error(`This account is registered as ${profile.role}. Select the correct login type.`);
     }
 
-  } catch (err) {
-    showFormError(err.message || 'Something went wrong. Please try again.');
+    window.location.href = destination(profile.role);
+  } catch (error) {
+    showFormError(error.message || 'Sign in failed. Please try again.');
   } finally {
     setLoading(false);
   }
 });
 
-// ── Validation ───────────────────────────────
 function validateForm() {
   let valid = true;
   const username = document.getElementById('username').value.trim();
-  const password = document.getElementById('password').value;
-
+  const password = passwordInput.value;
   if (!username) { showFieldError('username', 'Username is required.'); valid = false; }
   if (!password) { showFieldError('password', 'Password is required.'); valid = false; }
   return valid;
 }
 
-function showFieldError(field, msg) {
+function showFieldError(field, message) {
   document.getElementById(field).classList.add('is-error');
-  document.getElementById(field + '-error').textContent = msg;
+  document.getElementById(`${field}-error`).textContent = message;
 }
 
-function showFormError(msg) {
-  formErrorTx.textContent = msg;
+function showFormError(message) {
+  formErrorTx.textContent = message;
   formError.hidden = false;
 }
 
 function clearErrors() {
-  ['username', 'password'].forEach(f => {
-    document.getElementById(f).classList.remove('is-error');
-    document.getElementById(f + '-error').textContent = '';
+  ['username', 'password'].forEach(field => {
+    document.getElementById(field).classList.remove('is-error');
+    document.getElementById(`${field}-error`).textContent = '';
   });
   formError.hidden = true;
 }
@@ -167,10 +110,20 @@ function setLoading(on) {
   btnSpinner.hidden = !on;
 }
 
-// Clear error on input
-['username', 'password'].forEach(f => {
-  document.getElementById(f).addEventListener('input', () => {
-    document.getElementById(f).classList.remove('is-error');
-    document.getElementById(f + '-error').textContent = '';
+['username', 'password'].forEach(field => {
+  document.getElementById(field).addEventListener('input', () => {
+    document.getElementById(field).classList.remove('is-error');
+    document.getElementById(`${field}-error`).textContent = '';
   });
 });
+
+const { data: { session } } = await supabase.auth.getSession();
+if (session) {
+  try {
+    const profile = await resolveUserProfile(session);
+    window.location.replace(destination(profile.role));
+  } catch {
+    await supabase.auth.signOut();
+    sessionStorage.clear();
+  }
+}

@@ -1,35 +1,48 @@
-const role = sessionStorage.getItem('role') || 'principal';
+import { requireSession, getRole, ACADEMIC_SESSION, escapeHTML } from './app-config.js';
+
+await requireSession();
+
+const role = getRole();
 const current = window.location.pathname.split('/').pop();
 const nav = document.querySelector('.sidebar-nav');
 
-const principalItems = [
-  ['principal-dashboard.html', 'Dashboard'], ['students.html', 'Students'], ['teachers.html', 'Teachers'],
-  ['parents.html', 'Parents'], ['attendance.html', 'Attendance'], ['grades.html', 'Grades'],
-  ['timetable.html', 'Timetable'], ['notices.html', 'Notices'], ['houses.html', 'Houses']
-];
+const icons = {
+  Dashboard: '⌂', Students: '♟', Teachers: '♙', Parents: '♧', Attendance: '✓',
+  Grades: 'A+', Timetable: '◷', Notices: '!', Houses: '◆', Operations: '⚙',
+  'My Children': '♡'
+};
 
-const navItems = {
-  principal: principalItems,
-  admin: [
-    ['admin-dashboard.html', 'Dashboard'], ['students.html', 'Students'], ['teachers.html', 'Teachers'],
-    ['parents.html', 'Parents'], ['attendance.html', 'Attendance'], ['grades.html', 'Grades'],
-    ['timetable.html', 'Timetable'], ['notices.html', 'Notices'], ['houses.html', 'Houses']
+const navigation = {
+  principal: [
+    ['Overview', [['principal-dashboard.html', 'Dashboard']]],
+    ['Academics', [['students.html', 'Students'], ['teachers.html', 'Teachers'], ['parents.html', 'Parents'], ['attendance.html', 'Attendance'], ['grades.html', 'Grades'], ['timetable.html', 'Timetable']]],
+    ['School Life', [['notices.html', 'Notices'], ['houses.html', 'Houses'], ['operations.html', 'Operations']]]
   ],
   teacher: [
-    ['teacher-dashboard.html', 'Dashboard'], ['students.html', 'Students'], ['attendance.html', 'Attendance'],
-    ['grades.html', 'Grades'], ['timetable.html', 'Timetable'], ['notices.html', 'Notices']
+    ['Overview', [['teacher-dashboard.html', 'Dashboard']]],
+    ['Academics', [['students.html', 'Students'], ['attendance.html', 'Attendance'], ['grades.html', 'Grades'], ['timetable.html', 'Timetable']]],
+    ['School Life', [['notices.html', 'Notices'], ['houses.html', 'Houses'], ['operations.html', 'Operations']]]
   ],
   parent: [
-    ['parent-dashboard.html', 'Dashboard'], ['my-children.html', 'My Children'],
-    ['attendance.html', 'Attendance'], ['notices.html', 'Notices']
+    ['Overview', [['parent-dashboard.html', 'Dashboard']]],
+    ['Student Information', [['my-children.html', 'My Children'], ['notices.html', 'Notices']]]
   ]
 };
 
 if (nav) {
-  const items = navItems[role] || principalItems;
-  nav.innerHTML = items.map(([href, label]) => {
-    const isDashboardPair = (current === 'admin-dashboard.html' && href === 'principal-dashboard.html') || (current === 'principal-dashboard.html' && href === 'admin-dashboard.html');
-    const active = href === current || isDashboardPair || (current === 'student-profile.html' && href === 'students.html');
-    return `<a href="${href}" class="nav-item ${active ? 'active' : ''}">${label}</a>`;
-  }).join('');
+  nav.innerHTML = (navigation[role] || []).map(([group, items]) => `
+    <div class="nav-group">
+      <div class="nav-group-title">${escapeHTML(group)}</div>
+      ${items.map(([href, label]) => {
+        const dashboardPair = ['admin-dashboard.html', 'principal-dashboard.html'].includes(current) && ['admin-dashboard.html', 'principal-dashboard.html'].includes(href);
+        const active = href === current || dashboardPair || (current === 'student-profile.html' && href === 'students.html');
+        return `<a href="${href}" class="nav-item ${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}>
+          <span class="nav-icon" aria-hidden="true">${icons[label] || '•'}</span><span>${escapeHTML(label)}</span>
+        </a>`;
+      }).join('')}
+    </div>`).join('');
 }
+
+document.querySelectorAll('.academic-session').forEach(el => {
+  el.textContent = `Academic Session ${ACADEMIC_SESSION}`;
+});

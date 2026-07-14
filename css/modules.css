@@ -210,3 +210,38 @@
   .form-panel { grid-template-columns: 1fr; }
   .attendance-options { grid-template-columns: 1fr; }
 }
+
+/* Module usability upgrade */
+.module-card { border-radius: 14px; box-shadow: 0 1px 0 rgba(15,23,42,.02); }
+.module-card-title { color: #172033; }
+.summary-tile { border-radius: 13px; }
+.form-panel { gap: 14px; }
+.field-group label { display: inline-flex; gap: 3px; align-items: center; }
+.required-mark { color: #c24141; }
+.field-error-text { min-height: 16px; color: #b42318; font-size: .72rem; }
+.invalid-field { border-color: #dc5b5b !important; background: #fff9f9 !important; }
+
+.bulk-action-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.record-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.meta-pill { background: #eff4f8; color: #52657a; padding: 3px 8px; border-radius: 999px; font-size: .7rem; font-weight: 650; }
+
+.operations-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(285px, 1fr)); gap: 14px; }
+.operation-card { background: #fff; border: 1px solid #dce5ef; border-radius: 13px; padding: 16px; }
+.operation-card-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.operation-type { color: #2563a6; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+.operation-title { color: #172033; font-weight: 800; margin-top: 5px; }
+.operation-description { color: #52657a; font-size: .8rem; line-height: 1.55; margin-top: 10px; white-space: pre-wrap; }
+.priority-high, .status-open, .status-pending { background: #fee2e2; color: #991b1b; }
+.priority-medium, .status-in-progress { background: #fef3c7; color: #92400e; }
+.priority-low, .status-completed, .status-closed { background: #dcfce7; color: #166534; }
+
+.empty-state-card { border: 1px dashed #c8d5e2; border-radius: 13px; padding: 30px 20px; text-align: center; color: #64748b; background: #fbfdff; }
+.confirm-message { color: #475569; line-height: 1.6; margin-bottom: 20px; }
+
+@media (max-width: 760px) {
+  .module-card { padding: 15px; }
+  .summary-strip { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 460px) {
+  .summary-strip { grid-template-columns: 1fr; }
+}

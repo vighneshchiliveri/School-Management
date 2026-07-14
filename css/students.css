@@ -372,3 +372,32 @@ code {
   word-break: break-all;
   line-height: 1.8;
 }
+
+/* Tables, forms, and modal refinements */
+.btn-primary, .btn-secondary, .btn-ghost, .btn-danger { min-height: 38px; border-radius: 8px; transition: transform .15s ease, background .15s ease, border-color .15s ease; }
+.btn-primary:active, .btn-secondary:active, .btn-ghost:active, .btn-danger:active { transform: translateY(1px); }
+button:disabled { opacity: .62; cursor: not-allowed; }
+.filter-input { min-height: 38px; border-color: #cfd9e3; }
+.filter-input:focus { box-shadow: 0 0 0 3px rgba(37,99,166,.12); }
+.table-wrap { border-radius: 13px; }
+.data-table th { position: sticky; top: 0; z-index: 2; }
+.data-table td { vertical-align: middle; }
+.data-table tbody tr:focus-within td { background: #f2f7fb; }
+.action-btn { min-height: 30px; border-radius: 6px; }
+.modal { border-radius: 14px; box-shadow: 0 24px 70px rgba(15,23,42,.28); }
+.modal-overlay { padding: 14px; backdrop-filter: blur(2px); }
+.field-group input, .field-group select, .field-group textarea { min-height: 40px; border-color: #cfd9e3; }
+.field-group textarea { min-height: 78px; resize: vertical; }
+.field-group input:focus, .field-group select:focus, .field-group textarea:focus { box-shadow: 0 0 0 3px rgba(37,99,166,.12); }
+.modal-footer { margin-top: 8px; }
+.csv-preview { max-height: 260px; overflow: auto; border: 1px solid #dce5ef; border-radius: 9px; margin-top: 12px; }
+.csv-preview table { font-size: .74rem; }
+
+@media (max-width: 650px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .field-group.full-width { grid-column: auto; }
+  .search-input { width: 100%; }
+  .filters-bar > * { flex: 1 1 140px; }
+  .modal-footer { flex-direction: column-reverse; }
+  .modal-footer button { width: 100%; }
+}

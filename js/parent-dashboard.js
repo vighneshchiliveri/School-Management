@@ -1,40 +1,42 @@
-import { supabase, requireSession, initLogout, escapeHTML } from './app-config.js';
+import { supabase, requireSession, initLogout, getProfile, escapeHTML, formatDate, statusBadge } from './app-config.js';
 
-const session = await requireSession();
+await requireSession(['parent']);
 initLogout();
+const profile = getProfile();
+document.getElementById('welcome-msg').textContent = `Welcome back, ${profile?.full_name || profile?.username || 'Parent'}`;
 
-const username = sessionStorage.getItem('username') || 'Parent';
-document.getElementById('welcome-msg').textContent = `Welcome back, ${username}`;
+const content = document.getElementById('dashboard-content');
+const { data: links, error } = await supabase.from('parent_student_links')
+  .select('student_id,students(id,full_name,class,section,roll_no,house,admission_no,is_archived)')
+  .eq('parent_id', profile.id);
 
-async function loadDashboard() {
-  const content = document.getElementById('dashboard-content');
-  const { data: parent } = await supabase.from('parents').select('id, full_name').eq('username', username).single();
-  if (!parent) {
-    content.innerHTML = '<p style="color:#888;">Parent record not found. Contact the JNV office.</p>';
-    return;
-  }
-  const { data: links } = await supabase
-    .from('parent_student_links')
-    .select('student_id, students(full_name, class, section, roll_no, house)')
-    .eq('parent_id', parent.id);
-  const children = (links || []).map(l => l.students).filter(Boolean);
-  const childCards = children.length > 0
-    ? children.map(s => `
-        <div class="stat-card">
-          <div class="stat-label">Class ${escapeHTML(s.class || '—')}${s.section ? ' – ' + escapeHTML(s.section) : ''}</div>
-          <div class="stat-value" style="font-size:1.1rem; margin-top:8px;">${escapeHTML(s.full_name)}</div>
-          <div style="font-size:0.8rem; color:#888; margin-top:4px;">Roll No: ${escapeHTML(s.roll_no || '—')} · ${escapeHTML(s.house || 'No House')}</div>
-        </div>`).join('')
-    : '<p style="color:#aaa; font-size:0.875rem;">No children linked yet. Contact the JNV office.</p>';
+if (error) {
+  content.innerHTML = `<p class="empty-state-card">${escapeHTML(error.message)}</p>`;
+} else {
+  const children = (links || []).map(link => link.students).filter(child => child && !child.is_archived);
+  const childIds = children.map(child => child.id);
+  const [{ data: attendance }, { data: grades }, { data: notices }] = await Promise.all([
+    childIds.length ? supabase.from('attendance').select('student_id,date,status').in('student_id', childIds).order('date', { ascending: false }) : Promise.resolve({ data: [] }),
+    childIds.length ? supabase.from('grades').select('student_id,exam_name,subject,grade,marks_obtained,max_marks,created_at').in('student_id', childIds).order('created_at', { ascending: false }) : Promise.resolve({ data: [] }),
+    supabase.from('notices').select('title,audience,published_at,created_at').eq('is_published', true).order('created_at', { ascending: false }).limit(5)
+  ]);
+
+  const latestAttendance = {};
+  (attendance || []).forEach(row => { if (!latestAttendance[row.student_id]) latestAttendance[row.student_id] = row; });
+  const latestGrade = {};
+  (grades || []).forEach(row => { if (!latestGrade[row.student_id]) latestGrade[row.student_id] = row; });
 
   content.innerHTML = `
-    <div class="section-title">My Children</div>
-    <div class="stat-grid" style="margin-bottom:28px;">${childCards}</div>
-    <div class="section-title">Quick Links</div>
-    <div class="activity-list">
-      <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text"><a href="my-children.html" style="color:#1a3a5c; text-decoration:none; font-weight:700;">Open My Children</a></div><div class="activity-time">Profile and latest attendance</div></div></div>
-      <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text"><a href="notices.html" style="color:#1a3a5c; text-decoration:none; font-weight:700;">Open Notices</a></div><div class="activity-time">Published school updates</div></div></div>
-    </div>`;
+    <div class="stat-grid">
+      <a class="stat-card" href="my-children.html"><div class="stat-label">Linked Children</div><div class="stat-value">${children.length}</div><div class="stat-detail">Open full profiles and progress</div></a>
+      <a class="stat-card" href="notices.html"><div class="stat-label">Recent Notices</div><div class="stat-value">${(notices || []).length}</div><div class="stat-detail">Published school updates</div></a>
+    </div>
+    <div class="section-heading-row"><h2 class="section-title">My Children</h2><a class="text-link" href="my-children.html">View details</a></div>
+    <div class="stat-grid">${children.length ? children.map(child => {
+      const att = latestAttendance[child.id];
+      const grade = latestGrade[child.id];
+      return `<a class="stat-card" href="my-children.html"><div class="stat-label">Class ${escapeHTML(child.class || '—')}${child.section ? ` – ${escapeHTML(child.section)}` : ''}</div><div class="stat-value" style="font-size:1.1rem;">${escapeHTML(child.full_name)}</div><div class="stat-detail">Roll ${escapeHTML(child.roll_no || '—')} · ${escapeHTML(child.house || 'No House')}</div><div class="stat-detail">Latest attendance: ${att ? statusBadge(att.status) + ` · ${formatDate(att.date)}` : '—'}</div><div class="stat-detail">Latest grade: ${grade ? `${escapeHTML(grade.subject)} · ${escapeHTML(grade.grade || '—')}` : '—'}</div></a>`;
+    }).join('') : '<p class="empty-state-card">No children are linked to this parent account. Contact the school office.</p>'}</div>
+    <div class="section-heading-row"><h2 class="section-title">Recent Notices</h2></div>
+    <div class="activity-list">${(notices || []).length ? notices.map(notice => `<div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">${escapeHTML(notice.title)} · ${escapeHTML(notice.audience || 'All')}</div><div class="activity-time">${formatDate(notice.published_at || notice.created_at)}</div></div></div>`).join('') : '<p class="empty-state">No notices.</p>'}</div>`;
 }
-
-loadDashboard();

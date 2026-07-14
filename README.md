@@ -1,90 +1,161 @@
-# JNV School Management Website
+# JNV School Management Portal — 2026 Upgrade
 
-This is a static Supabase-powered school management website for Jawahar Navodaya Vidyalaya.
+A static HTML/CSS/JavaScript school management portal powered by Supabase. It can be deployed directly to Vercel without a build command.
 
-## Completed sidebar modules
+## Major improvements in this version
 
-- Admin Dashboard
-- Students with CSV import, filters, add/edit/delete, profile, and ID card print
-- Teachers
-- Parents
-- Attendance
-- Grades / Marks Entry
-- Timetable
-- Notices
-- Houses
-- Parent Dashboard
-- My Children parent view
+- Verified Supabase role resolution instead of trusting a browser-only role value
+- Page-level access control for Principal, Teacher, and Parent accounts
+- Supabase Row Level Security policies for real database authorization
+- Parent privacy: parents can access only linked children and published notices
+- Principal-controlled teacher Class Access permissions for attendance, grades, students, and timetable
+- Redesigned Principal Dashboard with today’s attendance, missing-register alerts, trends, quick actions, notices, and activity history
+- Improved Teacher and Parent dashboards
+- Safe record archiving instead of immediate permanent deletion
+- Activity logging for important create, update, archive, import, attendance, grades, timetable, and operations actions
+- Proper CSV parser with validation and preview before importing students
+- CSV exports and Print / PDF buttons
+- Stronger form validation and safer attendance/grade upserts
+- Mobile slide-out navigation, grouped sidebar, icons, user information, and academic session
+- Better keyboard access, focus styles, modal roles, Escape support, and focus trapping
+- New JNV Operations module for:
+  - MOD daily reports
+  - Hostel and dormitory matters
+  - Mess and hygiene
+  - Medical-room visits
+  - Staff leave and duty roster
+  - Library matters
+  - Maintenance complaints
+  - Gate passes and visitors
+  - Inventory and stock
+  - Student welfare
 
-## Folder structure
+## Required Supabase update
 
-```text
-School-Management-main/
-├── index.html
-├── css/
-│   ├── dashboard.css
-│   ├── login.css
-│   ├── modules.css
-│   └── students.css
-├── js/
-│   ├── app-config.js
-│   ├── login.js
-│   ├── admin-dashboard.js
-│   ├── teacher-dashboard.js
-│   ├── parent-dashboard.js
-│   ├── students.js
-│   ├── student-profile.js
-│   ├── teachers.js
-│   ├── parents.js
-│   ├── attendance.js
-│   ├── grades.js
-│   ├── timetable.js
-│   ├── notices.js
-│   ├── houses.js
-│   └── my-children.js
-├── pages/
-│   ├── admin-dashboard.html
-│   ├── teacher-dashboard.html
-│   ├── parent-dashboard.html
-│   ├── students.html
-│   ├── student-profile.html
-│   ├── teachers.html
-│   ├── parents.html
-│   ├── attendance.html
-│   ├── grades.html
-│   ├── timetable.html
-│   ├── notices.html
-│   ├── houses.html
-│   └── my-children.html
-├── templates/
-│   ├── students-template.csv
-│   └── student-templates.csv
-└── sql/
-    └── supabase-schema.sql
-```
+Before using the upgraded website, open **Supabase → SQL Editor** and run these files in this exact order:
 
-## Supabase setup
+1. `sql/supabase-schema.sql`
+2. `sql/supabase-security.sql`
+3. Optional read-only verification: `sql/verify-install.sql`
 
-The project still uses the existing Supabase URL and anon key from the original website. If a new module shows a table error, open Supabase SQL Editor and run:
+The first file creates or upgrades tables, adds archive fields, audit fields, constraints, indexes, and the Operations table.
+
+The second file links existing `username@school.local` Auth accounts to profile records, enables RLS, and creates Principal/Teacher/Parent policies.
+
+Do not skip the security script. Frontend menu hiding alone is not sufficient protection.
+
+## Existing login convention
+
+The portal signs in through Supabase Auth using:
 
 ```text
-sql/supabase-schema.sql
+username@school.local
 ```
 
-Use your existing Supabase Auth users and credentials. Do not hard-code passwords in the frontend.
+Examples:
 
-## Deploy to Vercel
+```text
+principal@school.local
+teacher1@school.local
+parent1@school.local
+```
 
-Upload this full folder to GitHub, then redeploy the same Vercel project. No build command is required because this is a static HTML/CSS/JS website.
+The corresponding username must exist in one of these profile tables:
 
-### Principal dashboard fix
+- `admins` → Principal
+- `teachers` → Teacher
+- `parents` → Parent
 
-The Principal dashboard is available at `pages/principal-dashboard.html`.
-The old `pages/admin-dashboard.html` also continues to work.
-The dashboard now renders a default view immediately and then updates live counts from Supabase, so it will not remain stuck on “Loading...” if a table is empty, missing, blocked by RLS, or slow to respond.
+The security script automatically fills `auth_user_id` when the Auth email matches the profile username. For accounts created later, create the Auth user manually in Supabase and either rerun `sql/supabase-security.sql` or set the matching profile row’s `auth_user_id`.
 
-Admin/principal login uses the existing admin credentials in your Supabase Auth and `admins` table. Do not hard-code passwords inside the website files.
+For production safety, keep public self-sign-up disabled in **Supabase → Authentication → Providers / Sign-up settings**. Accounts should be created only by an authorized school administrator.
 
-## Student Table Sorting
+## Deployment to Vercel
 
-Student lists now display in ascending order by Class, Section, numeric Roll No, and then Admission No. This avoids the common text-sorting problem where roll numbers appear as 1, 10, 11, 2.
+1. Back up the existing GitHub repository and Supabase database.
+2. Run the two SQL files listed above.
+3. Replace the existing repository files with the contents of this project folder.
+4. Commit and push to GitHub.
+5. Redeploy the same Vercel project.
+6. Sign out completely and sign in again so the verified role is refreshed.
+
+No build command is required. The project is a static website. See `DEPLOYMENT-CHECKLIST.md` for a concise rollout and rollback sequence.
+
+## Important pages
+
+```text
+index.html
+pages/principal-dashboard.html
+pages/teacher-dashboard.html
+pages/parent-dashboard.html
+pages/students.html
+pages/teachers.html
+pages/parents.html
+pages/attendance.html
+pages/grades.html
+pages/timetable.html
+pages/notices.html
+pages/houses.html
+pages/operations.html
+pages/my-children.html
+```
+
+## Recommended verification after deployment
+
+Test each account type separately:
+
+### Principal
+
+- Dashboard data loads
+- Add/edit/archive a student
+- Import a small test CSV
+- Add a teacher and parent
+- Open **Class Access** for each teacher and assign permitted class/section combinations
+- Link a parent to a student using **Manage Links**
+- Save attendance and grades
+- Publish a notice
+- Add an Operations record
+- Confirm Recent Activity updates
+
+### Teacher
+
+- Cannot open Principal-only pages such as Teachers or Parents
+- Can view only assigned classes after Class Access has been configured
+- Can mark attendance and enter grades only for assigned class/section permissions
+- Can view timetable, houses, notices, and operations
+- Cannot edit student master records
+
+### Parent
+
+- Can open only Parent Dashboard, My Children, and Notices
+- Can see only students linked through `parent_student_links`
+- Cannot open the general Attendance, Students, Teachers, Parents, Grades, Timetable, Houses, or Operations pages
+
+## Teacher Class Access migration note
+
+For compatibility with existing accounts, a teacher who has **no rows** in `teacher_class_permissions` temporarily keeps broad legacy class access. As soon as the Principal saves that teacher’s **Class Access** selections, database policies restrict the teacher to those assigned classes and subjects. Configure every teacher after deployment. Saving Class Access with no selected classes intentionally gives that teacher no student, attendance, grade, or timetable class access.
+
+## CSV format
+
+Use `templates/students-template.csv`. The parser supports quoted fields containing commas, including addresses.
+
+Required columns:
+
+```text
+full_name,class,section
+```
+
+Recommended columns:
+
+```text
+admission_no,roll_no,date_of_birth,gender,blood_group,category,house,father_name,mother_name,parent_phone,address
+```
+
+## Backup and restoration
+
+Student, teacher, parent, notice, timetable, and operations records are archived by setting `is_archived = true`. They are not permanently deleted by the website. A database administrator can restore a record by setting:
+
+```sql
+is_archived = false,
+archived_at = null
+```
