@@ -151,6 +151,26 @@ create table if not exists activity_log (
   created_at timestamptz default now()
 );
 
+-- Legacy timetable compatibility.
+-- Some earlier databases used the column name "period" instead of "period_no".
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'timetable' and column_name = 'period'
+  ) and not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'timetable' and column_name = 'period_no'
+  ) then
+    alter table timetable rename column period to period_no;
+  elsif not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'timetable' and column_name = 'period_no'
+  ) then
+    alter table timetable add column period_no integer;
+  end if;
+end $$;
+
 -- Safe archive fields. The website archives records instead of permanently deleting them.
 alter table teachers add column if not exists is_archived boolean not null default false;
 alter table teachers add column if not exists archived_at timestamptz;
