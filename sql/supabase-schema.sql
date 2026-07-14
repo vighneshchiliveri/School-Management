@@ -152,9 +152,12 @@ create table if not exists activity_log (
 );
 
 -- Legacy timetable compatibility.
--- Some earlier databases used the column name "period" instead of "period_no".
+-- Existing projects may use period/class_name/section_name instead of
+-- period_no/class/section. Normalize those columns before any indexes or
+-- duplicate checks refer to them.
 do $$
 begin
+  -- Period column
   if exists (
     select 1 from information_schema.columns
     where table_schema = 'public' and table_name = 'timetable' and column_name = 'period'
@@ -162,12 +165,68 @@ begin
     select 1 from information_schema.columns
     where table_schema = 'public' and table_name = 'timetable' and column_name = 'period_no'
   ) then
-    alter table timetable rename column period to period_no;
+    alter table public.timetable rename column period to period_no;
   elsif not exists (
     select 1 from information_schema.columns
     where table_schema = 'public' and table_name = 'timetable' and column_name = 'period_no'
   ) then
-    alter table timetable add column period_no integer;
+    alter table public.timetable add column period_no integer;
+  end if;
+
+  -- Class column
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'timetable' and column_name = 'class_name'
+  ) and not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'timetable' and column_name = 'class'
+  ) then
+    alter table public.timetable rename column class_name to class;
+  elsif not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'timetable' and column_name = 'class'
+  ) then
+    alter table public.timetable add column class text;
+  end if;
+
+  -- Section column
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'timetable' and column_name = 'section_name'
+  ) and not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'timetable' and column_name = 'section'
+  ) then
+    alter table public.timetable rename column section_name to section;
+  elsif not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'timetable' and column_name = 'section'
+  ) then
+    alter table public.timetable add column section text;
+  end if;
+
+  -- Day column
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'timetable' and column_name = 'day'
+  ) then
+    alter table public.timetable add column day text;
+  end if;
+
+  -- Subject column
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'timetable' and column_name = 'subject'
+  ) then
+    alter table public.timetable add column subject text;
+  end if;
+
+  -- Created timestamp used to decide which duplicate is newest.
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'timetable' and column_name = 'created_at'
+  ) then
+    alter table public.timetable add column created_at timestamptz default now();
   end if;
 end $$;
 
